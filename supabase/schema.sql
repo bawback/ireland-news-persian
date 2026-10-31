@@ -74,3 +74,9 @@ drop policy if exists "public can read published articles" on articles;
 create policy "public can read published articles" on articles
   for select using (status = 'published');
 -- (No policies on raw_items: only the worker, using the service role key, can access it.)
+
+-- Table privileges (needed when "Automatically expose new tables" is turned off).
+-- The website reads with the anon key; the news worker writes with the service role key.
+grant usage on schema public to anon, authenticated, service_role;
+grant select on articles to anon, authenticated;
+grant all on articles, raw_items to service_role;

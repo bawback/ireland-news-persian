@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# اخبار ایرلند به فارسی (Ireland News Persian)
 
-## Getting Started
+سرویس خبری خودکار که خبرهای ایرلند و ایرلند شمالی را از منابع معتبر جمع می‌کند، با هوش مصنوعی Claude به فارسی روان می‌نویسد، روی وب‌سایت منتشر می‌کند و در تلگرام می‌فرستد.
 
-First, run the development server:
+## ساختار پروژه
+
+| پوشه | کار |
+| --- | --- |
+| `src/app` | صفحه‌های وب‌سایت (Next.js) |
+| `src/components` | اجزای ظاهری سایت |
+| `src/lib` | منطق مشترک: دسته‌ها، تاریخ فارسی، راست‌به‌چپ (`bidi.ts`)، خواندن خبر از پایگاه داده |
+| `scripts` | موتور خبر: خواندن منابع، فیلتر، ترجمه، انتشار در تلگرام |
+| `scripts/sources.ts` | فهرست منابع خبری |
+| `supabase/schema.sql` | ساختار پایگاه داده |
+| `.github/workflows` | اجرای خودکار موتور خبر هر ۳۰ دقیقه |
+
+## مدل انتشار (حقوقی)
+
+- منابع با مجوز آزاد (`kind: "open"`): ترجمه کامل و وفادار.
+- رسانه‌ها (`kind: "media"`): گزارش فارسی مستقل با همه واقعیت‌ها، بدون کپی جمله‌به‌جمله، با لینک به منبع.
+- به‌طور پیش‌فرض همه خبرها پیش از انتشار منتظر تأیید می‌مانند (`REQUIRE_REVIEW=true`).
+
+## اجرای سایت روی کامپیوتر خودتان
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+سپس `http://localhost:3000` را باز کنید. تا وقتی پایگاه داده وصل نشده، سایت با مطالب نمونه نمایش داده می‌شود.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## راه‌اندازی کامل (یک بار)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Supabase**: یک پروژه بسازید. در SQL Editor محتوای `supabase/schema.sql` را اجرا کنید. از Project Settings → API این سه مقدار را بردارید: `Project URL`، `anon key`، `service_role key`.
+2. **Anthropic**: در console.anthropic.com کلید API بسازید و سقف هزینه ماهانه تنظیم کنید.
+3. **تلگرام**: با @BotFather یک ربات بسازید، توکن را بردارید، ربات را مدیر کانال کنید.
+4. **GitHub → Settings → Secrets and variables → Actions**:
+   - Secrets: `ANTHROPIC_API_KEY`، `SUPABASE_URL`، `SUPABASE_SERVICE_ROLE_KEY`، `TELEGRAM_BOT_TOKEN`، `REVALIDATE_SECRET`
+   - Variables: `SITE_URL`، `TELEGRAM_CHANNEL_ID` (مثلاً `@irelandnewspersian`)، `REQUIRE_REVIEW`
+5. **Vercel**: مخزن را import کنید و متغیرهای `NEXT_PUBLIC_*` و `REVALIDATE_SECRET` را از `.env.example` وارد کنید.
 
-## Learn More
+## تأیید خبرها
 
-To learn more about Next.js, take a look at the following resources:
+در Supabase → Table Editor → `articles`، خبرهای با وضعیت `pending_review` را ببینید. برای انتشار، `status` را به `published` تغییر دهید (زمان انتشار خودکار ثبت می‌شود). برای رد، `rejected`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## دستورهای مفید
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| دستور | کار |
+| --- | --- |
+| `npm run dev` | اجرای سایت |
+| `npm run try -- <url>` | امتحان ترجمه یک خبر بدون پایگاه داده (فقط کلید Anthropic لازم است) |
+| `npm run check-sources` | بررسی سالم بودن همه منابع خبری |
+| `npm run ingest` | یک بار اجرای موتور خبر |
+| `npm run post:telegram` | ارسال خبرهای منتشرشده به تلگرام |
+| `npm test` / `npm run typecheck` / `npm run lint` | آزمون‌ها و بررسی کد |

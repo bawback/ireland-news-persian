@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --ink: #14181f;
+  --muted: #5b6472;
+  --line: #e3e1da;
+  --brand: #0f7a4d;
+  --brand-soft: #e3f3ea;
+  --accent: #e0702a;
+  --accent-soft: #fdeee3;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0d1117;
+    --surface: #151b23;
+    --ink: #e8eaed;
+    --muted: #9aa4b2;
+    --line: #2a313c;
+    --brand: #3fbf86;
+    --brand-soft: #12291f;
+    --accent: #f39a5b;
+    --accent-soft: #2d1d12;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: "Vazirmatn Variable", Tahoma, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01";
+}
+
+/* English words inside Persian text stay in one piece and in the right place. */
+bdi[dir="ltr"] {
+  unicode-bidi: isolate;
+}
+
+.prose-fa p {
+  margin-block: 1.1em;
+  line-height: 2.1;
+  font-size: 1.125rem;
+}
+@media (min-width: 640px) {
+  .prose-fa p {
+    text-align: justify;
+  }
+}
+.prose-fa h2 {
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+.prose-fa ul {
+  margin-block: 1em;
+  padding-inline-start: 1.4em;
+  list-style: disc;
+}
+.prose-fa li {
+  margin-block: 0.4em;
+  line-height: 2;
+  font-size: 1.1rem;
+}
+.prose-fa blockquote {
+  margin-block: 1.5em;
+  padding: 0.8em 1.2em;
+  border-inline-start: 4px solid var(--brand);
+  background: var(--brand-soft);
+  border-radius: 0.5rem;
+  line-height: 2;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -26,7 +26,8 @@ export async function generateMetadata({ params }: PageProps<"/news/[slug]">): P
 
 export async function generateStaticParams() {
   const latest = await getLatest(50);
-  return latest.map((a) => ({ slug: a.slug }));
+  // Cache Components needs at least one entry at build time, even before any news exists.
+  return latest.length ? latest.map((a) => ({ slug: a.slug })) : [{ slug: "welcome" }];
 }
 
 export default function ArticlePage({ params }: PageProps<"/news/[slug]">) {

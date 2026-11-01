@@ -12,13 +12,13 @@ import { createHash } from "node:crypto";
 import { SOURCES, type Source } from "./sources";
 import { fetchFeed, type FeedItem } from "./lib/feeds";
 import { extractArticleText } from "./lib/extract";
-import { classifyItems, writeArticle, type Classification } from "./lib/ai";
+import { classifyItems, writeArticle, WRITER_MODEL, WRITER_MODEL_IMPORTANT, type Classification } from "./lib/ai";
 import { adminDb } from "./lib/db";
 import { envBool, envInt, envOptional } from "./lib/env";
 
 const MAX_AGE_HOURS = envInt("MAX_AGE_HOURS", 36);
-const MAX_ARTICLES_PER_RUN = envInt("MAX_ARTICLES_PER_RUN", 6);
-const MIN_IMPORTANCE = envInt("MIN_IMPORTANCE", 2);
+const MAX_ARTICLES_PER_RUN = envInt("MAX_ARTICLES_PER_RUN", 3);
+const MIN_IMPORTANCE = envInt("MIN_IMPORTANCE", 3);
 const REQUIRE_REVIEW = envBool("REQUIRE_REVIEW", true); // start safe: everything waits for approval
 
 const db = adminDb();
@@ -137,7 +137,9 @@ async function main() {
     const text = fullText.length > it.summary.length ? fullText : `${it.title}\n\n${it.summary}`;
     const mode = s.kind === "open" ? "translation" : "report";
 
-    const article = await writeArticle({ mode, sourceName: s.nameEn, title: it.title, publishedAt: it.publishedAt, text });
+    const important = c.importance >= 4 || c.immigrant_relevance >= 3;
+    const model = important ? WRITER_MODEL_IMPORTANT : WRITER_MODEL;
+    const article = await writeArticle({ model, mode, sourceName: s.nameEn, title: it.title, publishedAt: it.publishedAt, text });
     if (!article) {
       await db.from("raw_items").update({ status: "failed" }).eq("url", it.url);
       continue;

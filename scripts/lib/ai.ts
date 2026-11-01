@@ -6,7 +6,14 @@ import { CATEGORIES } from "../../src/lib/categories";
 
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 
-export const WRITER_MODEL = process.env.WRITER_MODEL ?? "claude-opus-5-5";
+/**
+ * Writer models. Defaults are chosen to keep costs very low while there is no income:
+ *  - everyday stories: Claude Haiku 5.5 (cheapest)
+ *  - important stories (importance >= 4, or essential for immigrants): set WRITER_MODEL_IMPORTANT
+ *    to "claude-sonnet-5-5" or "claude-opus-5-5" for higher quality when the budget allows.
+ */
+export const WRITER_MODEL = process.env.WRITER_MODEL ?? "claude-haiku-5-5";
+export const WRITER_MODEL_IMPORTANT = process.env.WRITER_MODEL_IMPORTANT ?? WRITER_MODEL;
 export const CLASSIFIER_MODEL = process.env.CLASSIFIER_MODEL ?? "claude-haiku-5-5";
 
 const categorySlugs = CATEGORIES.map((c) => c.slug) as [string, ...string[]];
@@ -118,18 +125,21 @@ TASK: write an ORIGINAL Persian news report based on the facts in a copyrighted 
 ${STYLE_GUIDE}`;
 
 export async function writeArticle(input: {
+  model?: string;
   mode: "translation" | "report";
   sourceName: string;
   title: string;
   publishedAt: string;
   text: string;
 }): Promise<WrittenArticle | null> {
+  const model = input.model ?? WRITER_MODEL;
+  // Server-side refusal fallbacks exist for Opus and Sonnet, not for Haiku.
+  const supportsFallback = /opus|sonnet/.test(model);
   const response = await client.beta.messages.parse({
-    model: WRITER_MODEL,
+    model,
     max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    output_config: { effort: "high", format: betaZodOutputFormat(ArticleSchema) },
+    ...(supportsFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+    output_config: { effort: "medium", format: betaZodOutputFormat(ArticleSchema) },
     cache_control: { type: "ephemeral" },
     system: input.mode === "translation" ? TRANSLATION_SYSTEM : REPORT_SYSTEM,
     messages: [

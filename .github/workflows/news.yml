@@ -2,7 +2,7 @@ name: News pipeline
 
 on:
   schedule:
-    - cron: "*/30 * * * *" # every 30 minutes
+    - cron: "7 6-23 * * *" # every hour from 06:07 to 23:07 UTC (stays inside the free GitHub Actions minutes)
   workflow_dispatch: {} # allows a manual run from the Actions tab
 
 concurrency:
@@ -29,7 +29,10 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
           REQUIRE_REVIEW: ${{ vars.REQUIRE_REVIEW || 'true' }}
-          MAX_ARTICLES_PER_RUN: ${{ vars.MAX_ARTICLES_PER_RUN || '6' }}
+          MAX_ARTICLES_PER_RUN: ${{ vars.MAX_ARTICLES_PER_RUN || '3' }}
+          MIN_IMPORTANCE: ${{ vars.MIN_IMPORTANCE || '3' }}
+          WRITER_MODEL: ${{ vars.WRITER_MODEL || 'claude-haiku-5-5' }}
+          WRITER_MODEL_IMPORTANT: ${{ vars.WRITER_MODEL_IMPORTANT || 'claude-haiku-5-5' }}
       - name: Post to Telegram
         run: npx tsx scripts/post-telegram.ts
         env:

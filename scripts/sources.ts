@@ -34,9 +34,10 @@ export const SOURCES: Source[] = [
   { id: "rte-sport", name: "آر‌تی‌ای", nameEn: "RTÉ Sport", feed: "https://www.rte.ie/feeds/rss/?index=/sport/", kind: "media", hint: "sport", priority: 8, verify: true },
   { id: "thejournal", name: "دژورنال", nameEn: "TheJournal.ie", feed: "https://www.thejournal.ie/feed/", kind: "media", priority: 7, verify: true },
   { id: "irish-examiner", name: "آیریش اگزمینر", nameEn: "Irish Examiner", feed: "https://www.irishexaminer.com/feed/35-top_news.xml", kind: "media", priority: 7, verify: true },
-  { id: "breakingnews", name: "بریکینگ‌نیوز", nameEn: "BreakingNews.ie", feed: "https://feeds.breakingnews.ie/bnireland", kind: "media", priority: 6, verify: true },
+  // BreakingNews.ie RSS has not been updated since September 2026.
+  // { id: "breakingnews", name: "بریکینگ‌نیوز", nameEn: "BreakingNews.ie", feed: "https://feeds.breakingnews.ie/bnireland", kind: "media", priority: 6, verify: true },
   { id: "irish-times", name: "آیریش تایمز", nameEn: "The Irish Times", feed: "https://www.irishtimes.com/arc/outboundfeeds/feed-irish-news/?outputType=xml", kind: "media", priority: 8, verify: true },
-  { id: "silicon-republic", name: "سیلیکون ریپابلیک", nameEn: "Silicon Republic", feed: "https://www.siliconrepublic.com/feed", kind: "media", hint: "tech", priority: 5, verify: true },
+  { id: "silicon-republic", name: "سیلیکون ریپابلیک", nameEn: "Silicon Republic", feed: "https://www.siliconrepublic.com/feed/", kind: "media", hint: "tech", priority: 5, verify: true },
   { id: "the42", name: "دِ فورتی‌تو", nameEn: "The42", feed: "https://www.the42.ie/feed/", kind: "media", hint: "sport", priority: 5, verify: true },
 
   // --- Northern Ireland (media) ---
@@ -44,7 +45,8 @@ export const SOURCES: Source[] = [
   { id: "belfast-telegraph", name: "بلفاست تلگراف", nameEn: "Belfast Telegraph", feed: "https://www.belfasttelegraph.co.uk/news/northern-ireland/rss", kind: "media", hint: "northern-ireland", priority: 6, verify: true },
 
   // --- Official sources ---
-  { id: "gov-ie", name: "دولت ایرلند", nameEn: "gov.ie", feed: "https://www.gov.ie/en/rss/press-releases/", kind: "open", priority: 10, licence: "CC BY 4.0 (check gov.ie copyright notice)", verify: true },
+  // gov.ie blocks requests from GitHub Actions servers (403 on every URL, even robots.txt), so it is left out for now.
+  // { id: "gov-ie", name: "دولت ایرلند", nameEn: "gov.ie", feed: "https://www.gov.ie/en/rss/press-releases/", kind: "open", priority: 10, licence: "CC BY 4.0 (check gov.ie copyright notice)", verify: true },
   { id: "irish-immigration", name: "اداره خدمات مهاجرت ایرلند", nameEn: "Irish Immigration Service", feed: "https://www.irishimmigration.ie/feed/", kind: "media", hint: "immigration", priority: 10, verify: true },
-  { id: "nidirect", name: "دولت ایرلند شمالی", nameEn: "nidirect", feed: "https://www.nidirect.gov.uk/news/rss.xml", kind: "open", hint: "northern-ireland", priority: 8, licence: "Open Government Licence v3.0", verify: true },
+  { id: "nidirect", name: "دولت ایرلند شمالی", nameEn: "nidirect", feed: "https://www.nidirect.gov.uk/news-rss.xml", kind: "open", hint: "northern-ireland", priority: 8, licence: "Open Government Licence v3.0" },
 ];

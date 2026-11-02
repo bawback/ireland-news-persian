@@ -78,6 +78,27 @@ async function recentStoryKeys(): Promise<Set<string>> {
   return new Set((data ?? []).map((r) => r.story_key).filter(Boolean));
 }
 
+async function recentTitles(): Promise<string[]> {
+  const since = new Date(Date.now() - 48 * 3600_000).toISOString();
+  const { data } = await db.from("articles").select("source_title").gte("created_at", since);
+  return (data ?? []).map((r) => r.source_title).filter(Boolean);
+}
+
+// Words too common in Irish headlines to say anything about which story it is.
+const COMMON = new Set(
+  "ireland irish dublin says said after over will with from that this have been year years people government new more than about into could would their they what when where which while amid".split(" "),
+);
+function titleWords(t: string): Set<string> {
+  return new Set(t.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter((w) => w.length >= 4 && !COMMON.has(w)));
+}
+/** Two headlines about the same event, even when the classifier gave them different story keys. */
+function sameStory(a: string, b: string): boolean {
+  const wa = titleWords(a);
+  const wb = titleWords(b);
+  const shared = [...wa].filter((w) => wb.has(w)).length;
+  return shared >= 3 || (shared >= 2 && shared / Math.min(wa.size, wb.size) >= 0.5);
+}
+
 function score(c: Classification, s: Source) {
   return c.importance * 2 + c.immigrant_relevance * 2 + s.priority / 5;
 }
@@ -128,9 +149,14 @@ async function main() {
     if (!prev || s.priority > prev.s.priority) bestByStory.set(c.story_key, { it, c, s });
   }
 
-  const chosen = [...bestByStory.values()]
-    .sort((a, b) => score(b.c, b.s) - score(a.c, a.s))
-    .slice(0, MAX_ARTICLES_PER_RUN);
+  const covered = await recentTitles();
+  const chosen: { it: FeedItem; c: Classification; s: Source }[] = [];
+  for (const cand of [...bestByStory.values()].sort((a, b) => score(b.c, b.s) - score(a.c, a.s))) {
+    if (chosen.length >= MAX_ARTICLES_PER_RUN) break;
+    const title = cand.it.title;
+    if (covered.some((t) => sameStory(t, title)) || chosen.some((x) => sameStory(x.it.title, title))) continue;
+    chosen.push(cand);
+  }
   console.log(`${bestByStory.size} distinct stories, writing ${chosen.length}\n`);
 
   let written = 0;
@@ -196,12 +222,18 @@ async function main() {
   const site = envOptional("SITE_URL");
   const secret = envOptional("REVALIDATE_SECRET");
   if (written && site && secret) {
-    await fetch(`${site}/api/revalidate`, { method: "POST", headers: { authorization: `Bearer ${secret}` } }).catch(() => {});
+    const res = await fetch(`${site}/api/revalidate`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+      signal: AbortSignal.timeout(20_000),
+    }).catch((e) => e as Error);
+    console.log("site refresh:", res instanceof Response ? res.status : String(res));
   }
   console.log(`\nDone: ${written} articles written.`);
 }
 
-main().catch((e) => {
+// Exit explicitly: open HTTP keep-alive sockets otherwise hold the job for minutes.
+main().then(() => process.exit(0)).catch((e) => {
   console.error(e);
   process.exit(1);
 });

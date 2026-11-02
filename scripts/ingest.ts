@@ -44,9 +44,10 @@ async function filterUnseen(items: FeedItem[]): Promise<FeedItem[]> {
   const seen = new Set<string>();
   for (let i = 0; i < unique.length; i += 40) {
     const urls = unique.slice(i, i + 40).map((x) => x.url);
-    const { data, error } = await db.from("raw_items").select("url").in("url", urls);
+    const { data, error } = await db.from("raw_items").select("url, status").in("url", urls);
     if (error) throw error;
-    data?.forEach((r) => seen.add(r.url));
+    // Items still "new" were never classified (e.g. an earlier run failed), so retry them.
+    data?.forEach((r) => r.status !== "new" && seen.add(r.url));
   }
   return unique.filter((i) => !seen.has(i.url));
 }
@@ -94,7 +95,7 @@ async function main() {
   if (!fresh.length) return;
 
   // Remember every new item so we never pay to process it twice.
-  const { error: insErr } = await db.from("raw_items").insert(
+  const { error: insErr } = await db.from("raw_items").upsert(
     fresh.map((it) => ({
       url: it.url,
       source_id: it.sourceId,
@@ -103,6 +104,7 @@ async function main() {
       published_at: it.publishedAt,
       status: "new",
     })),
+    { onConflict: "url" },
   );
   if (insErr) throw insErr;
 
@@ -113,13 +115,14 @@ async function main() {
   const bestByStory = new Map<string, { it: FeedItem; c: Classification; s: Source }>();
   for (const it of fresh) {
     const c = classes.get(it.url);
+    if (!c) continue; // not classified this time; stays "new" and is retried next run
     const s = sourceById.get(it.sourceId)!;
-    const status = !c || !c.relevant || c.importance < MIN_IMPORTANCE ? "skipped" : "candidate";
+    const status = !c.relevant || c.importance < MIN_IMPORTANCE ? "skipped" : "candidate";
     await db
       .from("raw_items")
-      .update({ status, category: c?.category, importance: c?.importance, immigrant_relevance: c?.immigrant_relevance, sensitive: c?.sensitive, story_key: c?.story_key })
+      .update({ status, category: c.category, importance: c.importance, immigrant_relevance: c.immigrant_relevance, sensitive: c.sensitive, story_key: c.story_key })
       .eq("url", it.url);
-    if (status !== "candidate" || !c) continue;
+    if (status !== "candidate") continue;
     if (seenKeys.has(c.story_key)) continue; // already covered in the last 48h
     const prev = bestByStory.get(c.story_key);
     if (!prev || s.priority > prev.s.priority) bestByStory.set(c.story_key, { it, c, s });

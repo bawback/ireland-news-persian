@@ -13,8 +13,10 @@ const client = new Anthropic(); // reads ANTHROPIC_API_KEY
  *    to "claude-sonnet-5-5" or "claude-opus-5-5" for higher quality when the budget allows.
  */
 export const WRITER_MODEL = process.env.WRITER_MODEL ?? "claude-haiku-5-5";
-export const WRITER_MODEL_IMPORTANT = process.env.WRITER_MODEL_IMPORTANT ?? WRITER_MODEL;
-export const CLASSIFIER_MODEL = process.env.CLASSIFIER_MODEL ?? "claude-haiku-5-5";
+export const WRITER_MODEL_IMPORTANT =
+  process.env.WRITER_MODEL_IMPORTANT ?? WRITER_MODEL;
+export const CLASSIFIER_MODEL =
+  process.env.CLASSIFIER_MODEL ?? "claude-haiku-5-5";
 
 const categorySlugs = CATEGORIES.map((c) => c.slug) as [string, ...string[]];
 
@@ -27,15 +29,19 @@ const ClassificationSchema = z.object({
     z.object({
       index: z.number().int(),
       relevant: z.boolean(),
-      category: z.enum(categorySlugs),
-      immigrant_relevance: z.number().int().min(0).max(3),
-      importance: z.number().int().min(1).max(5),
+      // Kept loose on purpose: the model occasionally strays, and one bad value
+      // must not throw away a whole batch. Values are normalised in classifyItems().
+      category: z.string(),
+      immigrant_relevance: z.number(),
+      importance: z.number(),
       sensitive: z.boolean(),
       story_key: z.string(),
     }),
   ),
 });
-export type Classification = z.infer<typeof ClassificationSchema>["items"][number];
+export type Classification = z.infer<
+  typeof ClassificationSchema
+>["items"][number];
 
 const CLASSIFIER_SYSTEM = `You triage news headlines for "Ireland News Persian", a Persian-language news service for Persian speakers living in the Republic of Ireland and Northern Ireland.
 
@@ -50,15 +56,33 @@ For every item decide:
 export async function classifyItems(
   items: { index: number; source: string; title: string; summary: string }[],
 ): Promise<Classification[]> {
-  const response = await client.messages.parse({
-    model: CLASSIFIER_MODEL,
-    max_tokens: 16000,
-    output_config: { effort: "low", format: zodOutputFormat(ClassificationSchema) },
-    system: CLASSIFIER_SYSTEM,
-    messages: [{ role: "user", content: JSON.stringify(items) }],
-  });
-  if (response.stop_reason === "refusal" || !response.parsed_output) return [];
-  return response.parsed_output.items;
+  try {
+    const response = await client.messages.parse({
+      model: CLASSIFIER_MODEL,
+      max_tokens: 16000,
+      output_config: {
+        effort: "low",
+        format: zodOutputFormat(ClassificationSchema),
+      },
+      system: CLASSIFIER_SYSTEM,
+      messages: [{ role: "user", content: JSON.stringify(items) }],
+    });
+    if (response.stop_reason === "refusal" || !response.parsed_output)
+      return [];
+    return response.parsed_output.items.map((c) => ({
+      ...c,
+      category: categorySlugs.includes(c.category) ? c.category : "ireland",
+      immigrant_relevance: clamp(c.immigrant_relevance, 0, 3),
+      importance: clamp(c.importance, 1, 5),
+    }));
+  } catch (e) {
+    console.warn("  classification batch failed:", String(e).slice(0, 300));
+    return [];
+  }
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, Math.round(Number.isFinite(n) ? n : min)));
 }
 
 // ---------------------------------------------------------------------------
@@ -75,10 +99,15 @@ const ArticleSchema = z.object({
   x_post: z.string(),
   instagram_caption: z.string(),
   whatsapp_post: z.string(),
-  confidence: z.enum(["high", "medium", "low"]),
+  confidence: z.string(), // "high" | "medium" | "low", normalised in writeArticle()
   notes_for_editor: z.string(),
 });
-export type WrittenArticle = z.infer<typeof ArticleSchema>;
+export type WrittenArticle = Omit<
+  z.infer<typeof ArticleSchema>,
+  "confidence"
+> & {
+  confidence: "high" | "medium" | "low";
+};
 
 const STYLE_GUIDE = `
 WRITING STYLE (Persian)
@@ -135,20 +164,34 @@ export async function writeArticle(input: {
   const model = input.model ?? WRITER_MODEL;
   // Server-side refusal fallbacks exist for Opus and Sonnet, not for Haiku.
   const supportsFallback = /opus|sonnet/.test(model);
-  const response = await client.beta.messages.parse({
-    model,
-    max_tokens: 16000,
-    ...(supportsFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
-    output_config: { effort: "medium", format: betaZodOutputFormat(ArticleSchema) },
-    cache_control: { type: "ephemeral" },
-    system: input.mode === "translation" ? TRANSLATION_SYSTEM : REPORT_SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: `Source: ${input.sourceName}\nPublished: ${input.publishedAt}\nOriginal headline: ${input.title}\n\n<source_text>\n${input.text}\n</source_text>`,
+  let response;
+  try {
+    response = await client.beta.messages.parse({
+      model,
+      max_tokens: 16000,
+      ...(supportsFallback
+        ? {
+            betas: ["server-side-fallback-2026-07-01"],
+            fallbacks: "default" as const,
+          }
+        : {}),
+      output_config: {
+        effort: "medium",
+        format: betaZodOutputFormat(ArticleSchema),
       },
-    ],
-  });
+      cache_control: { type: "ephemeral" },
+      system: input.mode === "translation" ? TRANSLATION_SYSTEM : REPORT_SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: `Source: ${input.sourceName}\nPublished: ${input.publishedAt}\nOriginal headline: ${input.title}\n\n<source_text>\n${input.text}\n</source_text>`,
+        },
+      ],
+    });
+  } catch (e) {
+    console.warn(`  writer failed: ${input.title}:`, String(e).slice(0, 300));
+    return null;
+  }
   if (response.stop_reason === "refusal") {
     console.warn(`  refused: ${input.title}`);
     return null;
@@ -157,5 +200,8 @@ export async function writeArticle(input: {
     console.warn(`  output cut off: ${input.title}`);
     return null;
   }
-  return response.parsed_output ?? null;
+  const out = response.parsed_output;
+  if (!out) return null;
+  const c = out.confidence.toLowerCase();
+  return { ...out, confidence: c === "high" || c === "medium" ? c : "low" };
 }

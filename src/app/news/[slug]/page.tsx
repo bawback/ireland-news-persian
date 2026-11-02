@@ -20,7 +20,13 @@ export async function generateMetadata({ params }: PageProps<"/news/[slug]">): P
     title: a.title_fa,
     description: a.summary_fa,
     alternates: { canonical: `/news/${a.slug}` },
-    openGraph: { type: "article", title: a.title_fa, description: a.summary_fa, publishedTime: a.published_at },
+    openGraph: {
+      type: "article",
+      title: a.title_fa,
+      description: a.summary_fa,
+      publishedTime: a.published_at,
+      ...(a.image_url ? { images: [a.image_url] } : {}),
+    },
   };
 }
 
@@ -71,6 +77,7 @@ async function ArticleView({ slug }: { slug: string }) {
     mainEntityOfPage: url,
     publisher: { "@type": "Organization", name: SITE.name },
     ...(a.source_url ? { isBasedOn: a.source_url } : {}),
+    ...(a.image_url ? { image: [a.image_url] } : {}),
   };
 
   return (
@@ -93,6 +100,14 @@ async function ArticleView({ slug }: { slug: string }) {
             <span className="rounded-full bg-accent-soft px-2.5 py-0.5 font-semibold text-accent">مهم برای مهاجران</span>
           )}
         </div>
+
+        {a.image_url && (
+          <figure className="mt-6">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={a.image_url} alt="" className="w-full rounded-xl object-cover" />
+            {a.image_credit && <figcaption className="mt-2 text-xs text-muted">{a.image_credit}</figcaption>}
+          </figure>
+        )}
 
         <p className="mt-6 rounded-xl border-s-4 border-brand bg-brand-soft p-5 text-lg leading-9 font-medium">
           <BidiText text={a.summary_fa} />

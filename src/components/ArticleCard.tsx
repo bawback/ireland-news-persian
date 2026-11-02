@@ -4,6 +4,12 @@ import { categoryName } from "@/lib/categories";
 import { relativeFa } from "@/lib/dates";
 import { BidiText } from "./BidiText";
 
+function Cover({ a, className }: { a: Article; className: string }) {
+  if (!a.image_url) return null;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={a.image_url} alt="" loading="lazy" className={`w-full object-cover ${className}`} />;
+}
+
 function Meta({ a }: { a: Article }) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -22,6 +28,7 @@ export function LeadCard({ a }: { a: Article }) {
       href={`/news/${a.slug}`}
       className="group block rounded-2xl border border-line bg-surface p-6 shadow-sm transition hover:shadow-md sm:p-8"
     >
+      <Cover a={a} className="mb-5 aspect-[16/9] rounded-xl" />
       <Meta a={a} />
       <h2 className="mt-4 text-2xl leading-[1.6] font-black group-hover:text-brand sm:text-[2rem]">
         <BidiText text={a.title_fa} />
@@ -40,6 +47,7 @@ export function ArticleCard({ a }: { a: Article }) {
       href={`/news/${a.slug}`}
       className="group flex h-full flex-col rounded-xl border border-line bg-surface p-5 transition hover:-translate-y-0.5 hover:shadow-md"
     >
+      <Cover a={a} className="-mx-5 -mt-5 mb-4 aspect-[16/9] w-[calc(100%+2.5rem)] max-w-none rounded-t-xl" />
       <Meta a={a} />
       <h3 className="mt-3 text-lg leading-8 font-bold group-hover:text-brand">
         <BidiText text={a.title_fa} />

@@ -2,7 +2,7 @@ name: News pipeline
 
 on:
   schedule:
-    - cron: "27 6-23 * * *" # every hour from 06:17 to 23:17 UTC (stays inside the free GitHub Actions minutes)
+    - cron: "27 6-23 * * *" # every hour from 06:27 to 23:27 UTC (stays inside the free GitHub Actions minutes)
   workflow_dispatch: {} # allows a manual run from the Actions tab
 
 concurrency:

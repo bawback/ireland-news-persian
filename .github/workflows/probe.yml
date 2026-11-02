@@ -1,0 +1,25 @@
+name: Probe feeds (temporary)
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in \
+            https://www.gov.ie/en/rss/press-releases/ \
+            https://www.gov.ie/en/rss/news/ \
+            https://www.gov.ie/robots.txt \
+            https://www.nidirect.gov.uk/news/rss.xml \
+            https://www.nidirect.gov.uk/rss/news \
+            https://www.nidirect.gov.uk/news \
+            https://www.northernireland.gov.uk/news \
+            https://www.irishimmigration.ie/feed/ \
+            https://feeds.breakingnews.ie/bnireland \
+            https://www.siliconrepublic.com/feed ; do
+            code=$(curl -sL -A "IrelandNewsPersianBot/1.0 (+https://www.irelandnewspersian.com)" -o /tmp/b -w "%{http_code} %{content_type} %{url_effective}" --max-time 20 "$u")
+            echo "== $u -> $code"
+            head -c 400 /tmp/b | tr '\n' ' '; echo
+            grep -oE '<(item|entry)>' /tmp/b | wc -l | sed 's/^/items: /'
+            grep -oiE 'href="[^"]*(rss|feed|atom)[^"]*"' /tmp/b | sort -u | head -8
+            grep -oE '<pubDate>[^<]*</pubDate>' /tmp/b | head -2
+          done

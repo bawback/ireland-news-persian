@@ -28,7 +28,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SITE_URL: ${{ vars.SITE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
-          REQUIRE_REVIEW: ${{ vars.REQUIRE_REVIEW || 'true' }}
+          REQUIRE_REVIEW: ${{ vars.REQUIRE_REVIEW || 'false' }}
           MAX_ARTICLES_PER_RUN: ${{ vars.MAX_ARTICLES_PER_RUN || '3' }}
           MIN_IMPORTANCE: ${{ vars.MIN_IMPORTANCE || '3' }}
           WRITER_MODEL: ${{ vars.WRITER_MODEL || 'claude-haiku-5-5' }}

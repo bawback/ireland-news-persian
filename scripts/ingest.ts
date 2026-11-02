@@ -19,7 +19,7 @@ import { envBool, envInt, envOptional } from "./lib/env";
 const MAX_AGE_HOURS = envInt("MAX_AGE_HOURS", 36);
 const MAX_ARTICLES_PER_RUN = envInt("MAX_ARTICLES_PER_RUN", 3);
 const MIN_IMPORTANCE = envInt("MIN_IMPORTANCE", 3);
-const REQUIRE_REVIEW = envBool("REQUIRE_REVIEW", true); // start safe: everything waits for approval
+const REQUIRE_REVIEW = envBool("REQUIRE_REVIEW", false); // false = fully automatic publishing
 
 const db = adminDb();
 const sourceById = new Map(SOURCES.map((s) => [s.id, s]));
@@ -145,7 +145,11 @@ async function main() {
       continue;
     }
 
-    const needsReview = REQUIRE_REVIEW || c.sensitive || article.confidence !== "high";
+    // Fully automatic by default: publish unless the writer only saw a headline/snippet.
+    // With REQUIRE_REVIEW=true, uncertain or sensitive stories wait for a human instead.
+    const status = REQUIRE_REVIEW
+      ? c.sensitive || article.confidence !== "high" ? "pending_review" : "published"
+      : article.confidence === "low" ? "rejected" : "published";
     const now = new Date().toISOString();
     const { data: inserted, error } = await db
       .from("articles")
@@ -171,8 +175,8 @@ async function main() {
         },
         confidence: article.confidence,
         notes_for_editor: article.notes_for_editor,
-        status: needsReview ? "pending_review" : "published",
-        published_at: needsReview ? null : now,
+        status,
+        published_at: status === "published" ? now : null,
       })
       .select("id")
       .single();
@@ -182,7 +186,7 @@ async function main() {
     }
     await db.from("raw_items").update({ status: "done", article_id: inserted.id }).eq("url", it.url);
     written++;
-    console.log(`  ✓ ${needsReview ? "waiting for review" : "published"}: ${article.title_fa}`);
+    console.log(`  ✓ ${status}: ${article.title_fa}`);
   }
 
   // Tell the website to refresh.

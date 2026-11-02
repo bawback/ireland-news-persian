@@ -42,8 +42,8 @@ async function readAllFeeds(): Promise<FeedItem[]> {
 async function filterUnseen(items: FeedItem[]): Promise<FeedItem[]> {
   const unique = [...new Map(items.map((i) => [i.url, i])).values()];
   const seen = new Set<string>();
-  for (let i = 0; i < unique.length; i += 200) {
-    const urls = unique.slice(i, i + 200).map((x) => x.url);
+  for (let i = 0; i < unique.length; i += 40) {
+    const urls = unique.slice(i, i + 40).map((x) => x.url);
     const { data, error } = await db.from("raw_items").select("url").in("url", urls);
     if (error) throw error;
     data?.forEach((r) => seen.add(r.url));

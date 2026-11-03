@@ -21,6 +21,15 @@ export const metadata: Metadata = {
   alternates: {
     types: { "application/rss+xml": "/feed.xml" },
   },
+  twitter: { card: "summary_large_image" },
+  robots: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+  // Search Console / Bing ownership codes, set on Vercel when the sites are verified.
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : undefined,
+  },
 };
 
 export const viewport: Viewport = {

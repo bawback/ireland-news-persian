@@ -3,6 +3,35 @@ import { ArticleCard, CompactItem, LeadCard } from "@/components/ArticleCard";
 import { SectionTitle } from "@/components/SectionTitle";
 import { SITE } from "@/lib/site";
 import { cacheLife } from "next/cache";
+import type { Metadata } from "next";
+import { JsonLd } from "@/components/JsonLd";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
+const siteJsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE.name,
+    alternateName: SITE.nameEn,
+    url: SITE.url,
+    inLanguage: "fa",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${SITE.url}/search?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "NewsMediaOrganization",
+    name: SITE.name,
+    alternateName: SITE.nameEn,
+    url: SITE.url,
+    logo: `${SITE.url}/brand/logo-1024.png`,
+    sameAs: [SITE.telegram, SITE.instagram, SITE.x].filter(Boolean),
+  },
+];
 
 export default async function HomePage() {
   "use cache";
@@ -18,6 +47,8 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-12">
+      <JsonLd data={siteJsonLd} />
+      <h1 className="sr-only">{`${SITE.name}: خبرهای امروز ایرلند و ایرلند شمالی به زبان فارسی`}</h1>
       <section className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <LeadCard a={lead} />

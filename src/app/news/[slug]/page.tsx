@@ -10,6 +10,7 @@ import { ArticleBody } from "@/components/ArticleBody";
 import { BidiText } from "@/components/BidiText";
 import { ShareButtons } from "@/components/ShareButtons";
 import { CompactItem } from "@/components/ArticleCard";
+import { JsonLd } from "@/components/JsonLd";
 import { cacheLife } from "next/cache";
 
 export async function generateMetadata({ params }: PageProps<"/news/[slug]">): Promise<Metadata> {
@@ -25,7 +26,10 @@ export async function generateMetadata({ params }: PageProps<"/news/[slug]">): P
       title: a.title_fa,
       description: a.summary_fa,
       publishedTime: a.published_at,
-      ...(a.image_url ? { images: [a.image_url] } : {}),
+      modifiedTime: a.published_at,
+      section: categoryName(a.category),
+      tags: a.tags,
+      images: [a.image_url || "/opengraph-image.png"],
     },
   };
 }
@@ -67,23 +71,39 @@ async function ArticleView({ slug }: { slug: string }) {
   const related = await getRelated(a);
   const url = `${SITE.url}/news/${a.slug}`;
 
+  const logo = `${SITE.url}/brand/logo-1024.png`;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
-    headline: a.title_fa,
+    headline: a.title_fa.slice(0, 110),
     description: a.summary_fa,
     datePublished: a.published_at,
+    dateModified: a.published_at,
     inLanguage: "fa",
     mainEntityOfPage: url,
-    publisher: { "@type": "Organization", name: SITE.name },
+    url,
+    image: [a.image_url || `${SITE.url}/opengraph-image.png`],
+    articleSection: categoryName(a.category),
+    keywords: a.tags.join(", "),
+    author: { "@type": "Organization", name: SITE.name, url: SITE.url },
+    publisher: { "@type": "NewsMediaOrganization", name: SITE.name, url: SITE.url, logo: { "@type": "ImageObject", url: logo } },
     ...(a.source_url ? { isBasedOn: a.source_url } : {}),
-    ...(a.image_url ? { image: [a.image_url] } : {}),
+  };
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "خانه", item: SITE.url },
+      { "@type": "ListItem", position: 2, name: categoryName(a.category), item: `${SITE.url}/category/${a.category}` },
+      { "@type": "ListItem", position: 3, name: a.title_fa, item: url },
+    ],
   };
 
   return (
     <div className="grid gap-10 lg:grid-cols-3">
       <article className="lg:col-span-2">
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <JsonLd data={jsonLd} />
+        <JsonLd data={breadcrumbs} />
         <nav className="mb-4 text-sm text-muted">
           <Link href="/" className="hover:text-brand">خانه</Link>
           <span className="mx-2">/</span>
@@ -104,7 +124,7 @@ async function ArticleView({ slug }: { slug: string }) {
         {a.image_url && (
           <figure className="mt-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={a.image_url} alt="" className="w-full rounded-xl object-cover" />
+            <img src={a.image_url} alt={a.title_fa} className="w-full rounded-xl object-cover" />
             {a.image_credit && <figcaption className="mt-2 text-xs text-muted">{a.image_credit}</figcaption>}
           </figure>
         )}

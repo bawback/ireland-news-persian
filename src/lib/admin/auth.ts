@@ -8,7 +8,8 @@ const MAX_AGE = 30 * 24 * 3600; // 30 days
 
 /** The admin panel works only when both values are set on the server (Vercel env vars). */
 export function adminConfigured(): boolean {
-  return Boolean(process.env.ADMIN_PASSWORD && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  // A short password is refused outright, so the panel cannot be opened with a weak one.
+  return (process.env.ADMIN_PASSWORD ?? "").length >= 12 && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 // The signing key depends on the password, so changing ADMIN_PASSWORD logs everyone out.

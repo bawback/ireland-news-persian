@@ -13,7 +13,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/category/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const cat = getCategory(slug);
-  return cat ? { title: cat.name, description: cat.description } : {};
+  return cat
+    ? { title: cat.name, description: cat.description, alternates: { canonical: `/category/${cat.slug}` } }
+    : {};
 }
 
 export default function CategoryPage({ params }: PageProps<"/category/[slug]">) {

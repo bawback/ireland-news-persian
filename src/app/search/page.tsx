@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { searchArticles } from "@/lib/articles";
 import { ArticleCard } from "@/components/ArticleCard";
 
-export const metadata: Metadata = { title: "جستجو" };
+export const metadata: Metadata = { title: "جستجو", robots: { index: false, follow: true } };
 
 function SearchForm({ term = "" }: { term?: string }) {
   return (

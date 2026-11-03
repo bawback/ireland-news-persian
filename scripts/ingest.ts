@@ -14,7 +14,8 @@ import { fetchFeed, type FeedItem } from "./lib/feeds";
 import { extractArticleText } from "./lib/extract";
 import { classifyItems, writeArticle, WRITER_MODEL, WRITER_MODEL_IMPORTANT, type Classification } from "./lib/ai";
 import { adminDb } from "./lib/db";
-import { envBool, envInt, envOptional } from "./lib/env";
+import { envBool, envInt } from "./lib/env";
+import { refreshSite } from "./lib/revalidate";
 
 const MAX_AGE_HOURS = envInt("MAX_AGE_HOURS", 36);
 const MAX_ARTICLES_PER_RUN = envInt("MAX_ARTICLES_PER_RUN", 3);
@@ -219,16 +220,7 @@ async function main() {
   }
 
   // Tell the website to refresh.
-  const site = envOptional("SITE_URL");
-  const secret = envOptional("REVALIDATE_SECRET");
-  if (written && site && secret) {
-    const res = await fetch(`${site}/api/revalidate`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${secret}` },
-      signal: AbortSignal.timeout(20_000),
-    }).catch((e) => e as Error);
-    console.log("site refresh:", res instanceof Response ? res.status : String(res));
-  }
+  if (written) await refreshSite();
   console.log(`\nDone: ${written} articles written.`);
 }
 

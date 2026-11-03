@@ -29,7 +29,9 @@ export async function generateMetadata({ params }: PageProps<"/news/[slug]">): P
       modifiedTime: a.published_at,
       section: categoryName(a.category),
       tags: a.tags,
-      images: [a.image_url || "/opengraph-image.png"],
+      images: a.image_url
+        ? [{ url: a.image_url, width: 1200, height: 675, alt: a.image_alt || a.title_fa }]
+        : ["/opengraph-image.png"],
     },
   };
 }
@@ -82,7 +84,18 @@ async function ArticleView({ slug }: { slug: string }) {
     inLanguage: "fa",
     mainEntityOfPage: url,
     url,
-    image: [a.image_url || `${SITE.url}/opengraph-image.png`],
+    image: a.image_url
+      ? [
+          {
+            "@type": "ImageObject",
+            url: a.image_url,
+            width: 1200,
+            height: 675,
+            caption: a.image_alt || a.title_fa,
+            ...(a.image_credit ? { creditText: a.image_credit } : {}),
+          },
+        ]
+      : [`${SITE.url}/opengraph-image.png`],
     articleSection: categoryName(a.category),
     keywords: a.tags.join(", "),
     author: { "@type": "Organization", name: SITE.name, url: SITE.url },
@@ -124,7 +137,15 @@ async function ArticleView({ slug }: { slug: string }) {
         {a.image_url && (
           <figure className="mt-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={a.image_url} alt={a.title_fa} className="w-full rounded-xl object-cover" />
+            <img
+              src={a.image_url}
+              alt={a.image_alt || a.title_fa}
+              title={a.image_alt || a.title_fa}
+              width={1200}
+              height={675}
+              fetchPriority="high"
+              className="aspect-video w-full rounded-xl object-cover"
+            />
             {a.image_credit && <figcaption className="mt-2 text-xs text-muted">{a.image_credit}</figcaption>}
           </figure>
         )}

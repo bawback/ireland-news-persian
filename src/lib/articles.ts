@@ -15,8 +15,8 @@ function db(): SupabaseClient {
   return client;
 }
 
-const COLUMNS =
-  "id, slug, title_fa, summary_fa, body_fa, category, tags, immigrant_relevance, importance, mode, source_name, source_url, source_title, image_url, image_credit, status, published_at, created_at";
+// "*" rather than a column list, so adding a column (e.g. image_alt) never breaks the site.
+const COLUMNS = "*";
 
 function sample(filter: (a: Article) => boolean = () => true, limit = 50): Article[] {
   return SAMPLE_ARTICLES.filter(filter)

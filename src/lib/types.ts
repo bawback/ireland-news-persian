@@ -20,6 +20,8 @@ export interface Article {
   source_title: string;
   image_url?: string | null;
   image_credit?: string | null;
+  /** Persian alt text for the picture (SEO and screen readers). */
+  image_alt?: string | null;
   status: ArticleStatus;
   published_at: string;
   created_at: string;

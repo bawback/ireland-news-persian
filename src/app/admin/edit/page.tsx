@@ -107,6 +107,9 @@ async function Editor({ searchParams }: { searchParams: PageProps<"/admin/edit">
           <Label text="منبع عکس" hint="مثلاً: عکس از رویترز. فقط از عکس‌هایی استفاده کن که حق استفاده‌اش را داری.">
             <input name="image_credit" defaultValue={a.image_credit ?? ""} className={field} />
           </Label>
+          <Label text="توضیح عکس (alt)" hint="یک جمله کوتاه که بگوید در عکس چه دیده می‌شود. برای گوگل و نابینایان مهم است.">
+            <input name="image_alt" defaultValue={a.image_alt ?? ""} className={field} />
+          </Label>
           {a.image_url && (
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="remove_image" className="size-4" /> حذف عکس

@@ -6,8 +6,18 @@ import { BidiText } from "./BidiText";
 
 function Cover({ a, className }: { a: Article; className: string }) {
   if (!a.image_url) return null;
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={a.image_url} alt="" loading="lazy" className={`w-full object-cover ${className}`} />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={a.image_url}
+      alt={a.image_alt ?? ""}
+      width={1200}
+      height={675}
+      loading="lazy"
+      decoding="async"
+      className={`w-full object-cover ${className}`}
+    />
+  );
 }
 
 function Meta({ a }: { a: Article }) {

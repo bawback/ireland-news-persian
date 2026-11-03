@@ -33,6 +33,16 @@ jobs:
           MIN_IMPORTANCE: ${{ vars.MIN_IMPORTANCE || '3' }}
           WRITER_MODEL: ${{ vars.WRITER_MODEL || 'claude-haiku-5-5' }}
           WRITER_MODEL_IMPORTANT: ${{ vars.WRITER_MODEL_IMPORTANT || 'claude-haiku-5-5' }}
+      - name: Add AI pictures to new articles
+        run: npx tsx scripts/add-images.ts
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          IMAGES_PER_RUN: ${{ vars.IMAGES_PER_RUN || '8' }}
       - name: Post to Telegram
         run: npx tsx scripts/post-telegram.ts
         env:

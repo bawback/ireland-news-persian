@@ -83,6 +83,7 @@ export async function saveArticle(form: FormData) {
     importance: int(form, "importance", 1, 5, 3),
     immigrant_relevance: int(form, "immigrant_relevance", 0, 3, 0),
     image_credit: text(form, "image_credit") || null,
+    image_alt: text(form, "image_alt") || null,
     image_url: /^https:\/\//.test(text(form, "image_url")) ? text(form, "image_url") : null,
   };
   if (!update.title_fa || !update.body_fa) redirect(`/admin/edit?id=${id}&error=empty`);
@@ -92,6 +93,7 @@ export async function saveArticle(form: FormData) {
     await removeImages(id);
     update.image_url = null;
     update.image_credit = null;
+    update.image_alt = null;
   } else if (file instanceof File && file.size > 0) {
     try {
       update.image_url = await uploadImage(id, file);
@@ -101,7 +103,12 @@ export async function saveArticle(form: FormData) {
     }
   }
 
-  const { error } = await adminDb().from("articles").update(update).eq("id", id);
+  let { error } = await adminDb().from("articles").update(update).eq("id", id);
+  if (error && /image_alt/.test(error.message)) {
+    // The image_alt column has not been added in Supabase yet: save everything else.
+    delete update.image_alt;
+    ({ error } = await adminDb().from("articles").update(update).eq("id", id));
+  }
   if (error) {
     console.error("save failed:", error.message);
     redirect(`/admin/edit?id=${id}&error=save`);

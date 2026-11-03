@@ -40,6 +40,7 @@ create table if not exists articles (
   source_title text,
   image_url text,
   image_credit text,
+  image_alt text,
   social jsonb not null default '{}',
   confidence text,
   notes_for_editor text,
@@ -67,6 +68,9 @@ create trigger articles_set_published_at
   for each row execute function set_published_at();
 
 -- Security: the public website may only read published articles.
+-- Added later (safe to re-run): alt text for the article picture, used for SEO and screen readers.
+alter table articles add column if not exists image_alt text;
+
 alter table articles enable row level security;
 alter table raw_items enable row level security;
 

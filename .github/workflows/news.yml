@@ -1,9 +1,9 @@
 name: News pipeline
 
 on:
-  schedule:
-    - cron: "27 6-23 * * *" # every hour from 06:27 to 23:27 UTC (stays inside the free GitHub Actions minutes)
-  workflow_dispatch: {} # allows a manual run from the Actions tab
+  # Started every hour (06:27-23:27 UTC) by a pg_cron job in Supabase, because GitHub's own
+  # schedule turned out to be unreliable. Can also be run by hand from the Actions tab.
+  workflow_dispatch: {}
 
 concurrency:
   group: news-pipeline

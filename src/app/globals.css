@@ -71,10 +71,23 @@ bdi[dir="ltr"] {
   font-size: 1.35rem;
   font-weight: 800;
 }
-.prose-fa ul {
+.prose-fa h3 {
+  margin-top: 1.6em;
+  margin-bottom: 0.4em;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.prose-fa ul,
+.prose-fa ol {
   margin-block: 1em;
   padding-inline-start: 1.4em;
   list-style: disc;
+}
+.prose-fa ol {
+  list-style: persian;
+}
+.prose-fa strong {
+  font-weight: 800;
 }
 .prose-fa li {
   margin-block: 0.4em;

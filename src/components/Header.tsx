@@ -39,6 +39,12 @@ export async function Header() {
             {getCategory(slug)?.name}
           </Link>
         ))}
+        <Link
+          href="/guides"
+          className="shrink-0 rounded-full px-3 py-1.5 font-bold text-brand transition hover:bg-brand-soft"
+        >
+          راهنماها
+        </Link>
       </nav>
     </header>
   );

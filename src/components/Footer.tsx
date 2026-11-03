@@ -41,6 +41,7 @@ export function Footer() {
         <div>
           <h3 className="mb-3 font-bold">درباره ما</h3>
           <ul className="space-y-2 text-sm text-muted">
+            <li><Link href="/guides" className="hover:text-brand">راهنماهای زندگی در ایرلند</Link></li>
             <li><Link href="/about" className="hover:text-brand">درباره و شیوه کار ما</Link></li>
             <li><Link href="/advertise" className="hover:text-brand">تبلیغ در اخبار ایرلند</Link></li>
             <li><Link href="/privacy" className="hover:text-brand">حریم خصوصی</Link></li>

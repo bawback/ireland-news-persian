@@ -5,6 +5,8 @@ import { SITE } from "@/lib/site";
 import { cacheLife } from "next/cache";
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
+import Link from "next/link";
+import { GUIDES } from "@/content/guides";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -71,6 +73,22 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      <section>
+        <SectionTitle title="راهنماهای کاربردی" href="/guides" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {GUIDES.slice(0, 4).map((g) => (
+            <Link
+              key={g.slug}
+              href={`/guides/${g.slug}`}
+              className="rounded-2xl border border-line bg-surface p-5 transition hover:border-brand"
+            >
+              <h3 className="text-lg leading-8 font-black">{g.title}</h3>
+              <p className="mt-2 line-clamp-2 text-sm leading-7 text-muted">{g.description}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {grid.length > 0 && (
         <section>

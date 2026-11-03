@@ -6,7 +6,7 @@
  */
 import { adminDb } from "./lib/db";
 import { envInt, envOptional } from "./lib/env";
-import { AI_IMAGE_CREDIT, planImage, renderImage } from "./lib/images";
+import { AI_IMAGE_CREDIT, ImageServiceUnavailable, planImage, renderImage } from "./lib/images";
 import { refreshSite } from "./lib/revalidate";
 
 const BUCKET = "news-images";
@@ -37,7 +37,14 @@ async function main() {
     console.log(`→ ${a.title_fa}`);
     const plan = await planImage(a);
     if (!plan) continue;
-    const webp = await renderImage(plan.prompt, falKey);
+    let webp: Buffer | null;
+    try {
+      webp = await renderImage(plan.prompt, falKey);
+    } catch (e) {
+      if (!(e instanceof ImageServiceUnavailable)) throw e;
+      console.warn("Stopping: the fal.ai account needs a valid key or more credit.");
+      break;
+    }
     if (!webp) continue;
 
     // SEO-friendly file name from the English slug, inside the article's own folder

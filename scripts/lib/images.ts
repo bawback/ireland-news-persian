@@ -53,6 +53,9 @@ export async function planImage(a: { title_fa: string; summary_fa: string; categ
   }
 }
 
+/** The account cannot generate pictures at all right now (wrong key, no credit). */
+export class ImageServiceUnavailable extends Error {}
+
 type FalResult = { images?: { url: string }[]; has_nsfw_concepts?: boolean[] };
 
 /** Generates the picture with FLUX.1 [schnell] on fal.ai and returns it as an optimised WebP. */
@@ -75,7 +78,10 @@ export async function renderImage(prompt: string, falKey: string): Promise<Buffe
     return null;
   }
   if (!res.ok) {
-    console.warn(`  image service error ${res.status}:`, (await res.text()).slice(0, 300));
+    const detail = (await res.text()).slice(0, 300);
+    console.warn(`  image service error ${res.status}:`, detail);
+    // Bad key or no credit: every further request would fail the same way.
+    if ([401, 402, 403].includes(res.status)) throw new ImageServiceUnavailable(detail);
     return null;
   }
   const json = (await res.json()) as FalResult;

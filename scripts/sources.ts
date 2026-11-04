@@ -28,6 +28,17 @@ export interface Source {
 }
 
 export const SOURCES: Source[] = [
+  // --- Entertainment, lifestyle, what's on (media) ---
+  { id: "joe", name: "جو", nameEn: "JOE.ie", feed: "https://www.joe.ie/feed", kind: "media", hint: "entertainment", priority: 5, verify: true },
+  { id: "lovin", name: "لاوین دابلین", nameEn: "Lovin Dublin", feed: "https://lovin.ie/feed", kind: "media", hint: "entertainment", priority: 5, verify: true },
+  { id: "her", name: "هر", nameEn: "Her.ie", feed: "https://www.her.ie/feed", kind: "media", hint: "entertainment", priority: 4, verify: true },
+  { id: "entertainment-ie", name: "انترتینمنت", nameEn: "entertainment.ie", feed: "https://entertainment.ie/feed/", kind: "media", hint: "entertainment", priority: 5, verify: true },
+  { id: "rte-entertainment", name: "آر‌تی‌ای", nameEn: "RTÉ Entertainment", feed: "https://www.rte.ie/feeds/rss/?index=/entertainment/", kind: "media", hint: "entertainment", priority: 6, verify: true },
+  { id: "dublin-live", name: "دابلین لایو", nameEn: "Dublin Live", feed: "https://www.dublinlive.ie/?service=rss", kind: "media", hint: "entertainment", priority: 4, verify: true },
+  { id: "totally-dublin", name: "توتالی دابلین", nameEn: "Totally Dublin", feed: "https://www.totallydublin.ie/feed/", kind: "media", hint: "entertainment", priority: 4, verify: true },
+  { id: "hotpress", name: "هات‌پرس", nameEn: "Hot Press", feed: "https://www.hotpress.com/feed", kind: "media", hint: "entertainment", priority: 4, verify: true },
+  { id: "virgin-media-news", name: "ویرجین مدیا نیوز", nameEn: "Virgin Media News", feed: "https://www.virginmedia.ie/news/rss", kind: "media", priority: 7, verify: true },
+
   // --- Republic of Ireland: general news (media) ---
   { id: "rte-news", name: "آر‌تی‌ای", nameEn: "RTÉ News", feed: "https://www.rte.ie/feeds/rss/?index=/news/", kind: "media", priority: 9, verify: true },
   { id: "rte-business", name: "آر‌تی‌ای", nameEn: "RTÉ Business", feed: "https://www.rte.ie/feeds/rss/?index=/news/business/", kind: "media", hint: "economy", priority: 8, verify: true },

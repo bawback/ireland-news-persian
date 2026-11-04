@@ -167,6 +167,24 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
         </p>
         <ShareButtons url={url} title={g.title} />
       </footer>
+
+      {GUIDES.length > 1 && (
+        <section className="mt-10" aria-labelledby="more-guides">
+          <h2 id="more-guides" className="mb-4 text-xl font-black">راهنماهای دیگر</h2>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {GUIDES.filter((o) => o.slug !== g.slug).map((o) => (
+              <li key={o.slug}>
+                <Link
+                  href={`/guides/${o.slug}`}
+                  className="block h-full rounded-xl border border-line bg-surface p-4 leading-8 font-bold transition hover:border-brand"
+                >
+                  <BidiText text={o.title} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </article>
   );
 }

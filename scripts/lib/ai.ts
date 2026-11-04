@@ -37,6 +37,7 @@ const ClassificationSchema = z.object({
       importance: z.number(),
       sensitive: z.boolean(),
       story_key: z.string(),
+      fun_appeal: z.number(),
     }),
   ),
 });
@@ -47,11 +48,13 @@ export type Classification = z.infer<
 const CLASSIFIER_SYSTEM = `You triage news headlines for "Ireland News Persian", a Persian-language news service for Persian speakers living in the Republic of Ireland and Northern Ireland.
 
 For every item decide:
-- relevant: true only if the story is about Ireland or Northern Ireland (events, people, laws, economy, sport, culture there) or directly affects people living there. World news with no Irish angle is not relevant. Pure celebrity gossip, horoscopes, sponsored content and live blogs are not relevant.
+- relevant: true only if the story is about Ireland or Northern Ireland (events, people, laws, economy, sport, culture there) or directly affects people living there. World news with no Irish angle is not relevant. Fun and light Irish stories ARE relevant: quirky or feel-good stories from Ireland, new openings and food spots, festivals, concerts and gigs announced or happening in Ireland (including international artists playing Dublin, Belfast or Cork), shows, exhibitions, things to do, Irish TV, film and music, and Irish celebrities. Gossip about non-Irish celebrities with no Irish angle, horoscopes, quizzes, competitions/giveaways, sponsored or affiliate content, shopping deals and live blogs are not relevant.
 - category: one of ${categorySlugs.join(", ")}. Use "northern-ireland" for stories based in Northern Ireland unless a more specific topic dominates. Use "community" only for stories about Iranians or Persian speakers in Ireland.
 - immigrant_relevance: 0 none, 1 slightly, 2 clearly useful for immigrants (cost of living, rent, jobs, tax, public services), 3 essential for immigrants (visas, residence permits, citizenship, employment permits, asylum, rules for non-EU nationals, anything about Iran or Iranians).
 - importance: 1 minor local story ... 5 major national story.
 - sensitive: true for crime, court cases, deaths, allegations against named people, or anything with legal or defamation risk.
+- fun_appeal: 0 none, 1 mildly interesting, 2 a fun read that many readers would enjoy or share, 3 a must-read fun story or a big event/concert/festival announcement. Only for light stories (category entertainment, culture or sport); serious news gets 0.
+- category "entertainment": concerts, gigs, festivals, events and things to do, nightlife, food and drink, TV/film/music, celebrities and quirky or feel-good stories.
 - story_key: a short lowercase English key describing the underlying event (e.g. "budget-2027-tax-bands", "dublin-airport-passenger-cap"), so that two articles about the same event from different outlets get the same key.`;
 
 export async function classifyItems(
@@ -75,6 +78,7 @@ export async function classifyItems(
       category: categorySlugs.includes(c.category) ? c.category : "ireland",
       immigrant_relevance: clamp(c.immigrant_relevance, 0, 3),
       importance: clamp(c.importance, 1, 5),
+      fun_appeal: clamp(c.fun_appeal, 0, 3),
     }));
   } catch (e) {
     console.warn("  classification batch failed:", String(e).slice(0, 300));
@@ -159,6 +163,15 @@ TASK: write an ORIGINAL Persian news report based on the facts in a copyrighted 
 - The source outlet is credited automatically below the article; do not write "according to [outlet]" in every paragraph (once is fine).
 ${STYLE_GUIDE}`;
 
+const LIGHT_STYLE = `
+
+THIS IS A LIGHT STORY (entertainment, event, concert, food, quirky or feel-good news)
+- Tone: lively, warm and friendly, like a good Persian lifestyle magazine; light humour is welcome. Still 100% accurate: no invented details, no exaggeration of facts.
+- title_fa: catchy and fun, but honest (it must match the story; no misleading clickbait).
+- For events, concerts, festivals and openings, make the practical details easy to find (only those that are in the source): date and time, venue and area, ticket prices, when tickets go on sale and where, age limits, and how to get there. Put them in a short "- " list under a "## " subheading such as «## اطلاعات برنامه».
+- telegram_post: playful, 2–4 fitting emojis, still short and factual.
+- Usually 150–400 Persian words.`;
+
 export async function writeArticle(input: {
   model?: string;
   mode: "translation" | "report";
@@ -166,6 +179,8 @@ export async function writeArticle(input: {
   title: string;
   publishedAt: string;
   text: string;
+  /** Fun / entertainment / event story: lighter, friendlier tone. */
+  light?: boolean;
 }): Promise<WrittenArticle | null> {
   const model = input.model ?? WRITER_MODEL;
   // Server-side refusal fallbacks exist for Opus and Sonnet, not for Haiku.
@@ -186,7 +201,7 @@ export async function writeArticle(input: {
         format: betaZodOutputFormat(ArticleSchema),
       },
       cache_control: { type: "ephemeral" },
-      system: input.mode === "translation" ? TRANSLATION_SYSTEM : REPORT_SYSTEM,
+      system: (input.mode === "translation" ? TRANSLATION_SYSTEM : REPORT_SYSTEM) + (input.light ? LIGHT_STYLE : ""),
       messages: [
         {
           role: "user",

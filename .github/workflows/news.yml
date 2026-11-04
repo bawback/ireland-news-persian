@@ -31,6 +31,7 @@ jobs:
           REQUIRE_REVIEW: ${{ vars.REQUIRE_REVIEW || 'false' }}
           MAX_ARTICLES_PER_RUN: ${{ vars.MAX_ARTICLES_PER_RUN || '3' }}
           MIN_IMPORTANCE: ${{ vars.MIN_IMPORTANCE || '3' }}
+          MAX_FUN_PER_RUN: ${{ vars.MAX_FUN_PER_RUN || '1' }}
           WRITER_MODEL: ${{ vars.WRITER_MODEL || 'claude-haiku-5-5' }}
           WRITER_MODEL_IMPORTANT: ${{ vars.WRITER_MODEL_IMPORTANT || 'claude-haiku-5-5' }}
       - name: Add AI pictures to new articles

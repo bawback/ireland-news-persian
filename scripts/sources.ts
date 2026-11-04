@@ -28,6 +28,14 @@ export interface Source {
 }
 
 export const SOURCES: Source[] = [
+  // --- Entertainment, what's on, fun Irish stories (media) ---
+  // Lovin Dublin, Her.ie and Virgin Media News have no public RSS feed that works from GitHub (checked Nov 2026).
+  { id: "joe", name: "جو", nameEn: "JOE.ie", feed: "https://www.joe.ie/feed", kind: "media", hint: "entertainment", priority: 5 },
+  { id: "rte-entertainment", name: "آر‌تی‌ای", nameEn: "RTÉ Entertainment", feed: "https://www.rte.ie/feeds/rss/?index=/entertainment/", kind: "media", hint: "entertainment", priority: 6 },
+  { id: "dublin-live", name: "دابلین لایو", nameEn: "Dublin Live", feed: "https://www.dublinlive.ie/?service=rss", kind: "media", hint: "entertainment", priority: 4 },
+  { id: "hotpress", name: "هات‌پرس", nameEn: "Hot Press", feed: "https://www.hotpress.com/feed", kind: "media", hint: "entertainment", priority: 4 },
+  { id: "totally-dublin", name: "توتالی دابلین", nameEn: "Totally Dublin", feed: "https://www.totallydublin.ie/feed/", kind: "media", hint: "entertainment", priority: 4 },
+
   // --- Republic of Ireland: general news (media) ---
   { id: "rte-news", name: "آر‌تی‌ای", nameEn: "RTÉ News", feed: "https://www.rte.ie/feeds/rss/?index=/news/", kind: "media", priority: 9, verify: true },
   { id: "rte-business", name: "آر‌تی‌ای", nameEn: "RTÉ Business", feed: "https://www.rte.ie/feeds/rss/?index=/news/business/", kind: "media", hint: "economy", priority: 8, verify: true },

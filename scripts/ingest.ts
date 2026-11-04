@@ -20,6 +20,11 @@ import { refreshSite } from "./lib/revalidate";
 const MAX_AGE_HOURS = envInt("MAX_AGE_HOURS", 36);
 const MAX_ARTICLES_PER_RUN = envInt("MAX_ARTICLES_PER_RUN", 3);
 const MIN_IMPORTANCE = envInt("MIN_IMPORTANCE", 3);
+// Fun lane: light stories (events, concerts, quirky news) are chosen separately, so they
+// never push out important news and are not filtered out by MIN_IMPORTANCE.
+const MAX_FUN_PER_RUN = envInt("MAX_FUN_PER_RUN", 1);
+const MIN_FUN_APPEAL = envInt("MIN_FUN_APPEAL", 2);
+const isFun = (c: Classification) => c.category === "entertainment" && c.fun_appeal >= MIN_FUN_APPEAL;
 const REQUIRE_REVIEW = envBool("REQUIRE_REVIEW", false); // false = fully automatic publishing
 
 const db = adminDb();
@@ -139,7 +144,7 @@ async function main() {
     const c = classes.get(it.url);
     if (!c) continue; // not classified this time; stays "new" and is retried next run
     const s = sourceById.get(it.sourceId)!;
-    const status = !c.relevant || c.importance < MIN_IMPORTANCE ? "skipped" : "candidate";
+    const status = c.relevant && (c.importance >= MIN_IMPORTANCE || isFun(c)) ? "candidate" : "skipped";
     await db
       .from("raw_items")
       .update({ status, category: c.category, importance: c.importance, immigrant_relevance: c.immigrant_relevance, sensitive: c.sensitive, story_key: c.story_key })
@@ -152,11 +157,24 @@ async function main() {
 
   const covered = await recentTitles();
   const chosen: { it: FeedItem; c: Classification; s: Source }[] = [];
-  for (const cand of [...bestByStory.values()].sort((a, b) => score(b.c, b.s) - score(a.c, a.s))) {
-    if (chosen.length >= MAX_ARTICLES_PER_RUN) break;
-    const title = cand.it.title;
-    if (covered.some((t) => sameStory(t, title)) || chosen.some((x) => sameStory(x.it.title, title))) continue;
+  const isNew = (title: string) => !covered.some((t) => sameStory(t, title)) && !chosen.some((x) => sameStory(x.it.title, title));
+  const all_ = [...bestByStory.values()];
+  // 1) news lane
+  let n = 0;
+  for (const cand of all_.filter((x) => x.c.category !== "entertainment").sort((a, b) => score(b.c, b.s) - score(a.c, a.s))) {
+    if (n >= MAX_ARTICLES_PER_RUN) break;
+    if (!isNew(cand.it.title)) continue;
     chosen.push(cand);
+    n++;
+  }
+  // 2) fun lane
+  let f = 0;
+  const funScore = (x: { c: Classification; s: Source }) => x.c.fun_appeal * 3 + x.c.importance + x.s.priority / 5;
+  for (const cand of all_.filter((x) => isFun(x.c)).sort((a, b) => funScore(b) - funScore(a))) {
+    if (f >= MAX_FUN_PER_RUN) break;
+    if (!isNew(cand.it.title)) continue;
+    chosen.push(cand);
+    f++;
   }
   console.log(`${bestByStory.size} distinct stories, writing ${chosen.length}\n`);
 
@@ -169,7 +187,7 @@ async function main() {
 
     const important = c.importance >= 4 || c.immigrant_relevance >= 3;
     const model = important ? WRITER_MODEL_IMPORTANT : WRITER_MODEL;
-    const written_ = await writeArticle({ model, mode, sourceName: s.nameEn, title: it.title, publishedAt: it.publishedAt, text });
+    const written_ = await writeArticle({ model, mode, sourceName: s.nameEn, title: it.title, publishedAt: it.publishedAt, text, light: c.category === "entertainment" });
     const article = written_ && (await cleanArticle(written_));
     if (!article) {
       await db.from("raw_items").update({ status: "failed" }).eq("url", it.url);

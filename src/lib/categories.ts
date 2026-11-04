@@ -14,12 +14,13 @@ export const CATEGORIES: Category[] = [
   { slug: "law", name: "قوانین و حقوق", description: "قانون‌های تازه و حقوق شهروندان" },
   { slug: "health", name: "سلامت", description: "خدمات درمانی و HSE" },
   { slug: "sport", name: "ورزش", description: "فوتبال، راگبی، GAA و ورزش‌های دیگر" },
-  { slug: "culture", name: "فرهنگ و هنر", description: "فرهنگ، هنر، رویدادها و جامعه" },
+  { slug: "entertainment", name: "سرگرمی و رویدادها", description: "کنسرت‌ها، رویدادها و خبرهای جالب و سرگرم‌کننده دابلین و ایرلند" },
+  { slug: "culture", name: "فرهنگ و هنر", description: "فرهنگ، هنر و جامعه" },
   { slug: "tech", name: "فناوری", description: "شرکت‌های فناوری و استارتاپ‌ها" },
   { slug: "community", name: "جامعه ایرانی", description: "رویدادها و خبرهای ایرانیان ایرلند" },
 ];
 
-export const NAV_CATEGORIES = ["ireland", "immigration", "economy", "housing", "politics", "northern-ireland", "sport", "culture"];
+export const NAV_CATEGORIES = ["ireland", "immigration", "entertainment", "economy", "housing", "politics", "northern-ireland", "sport", "culture"];
 
 export function getCategory(slug: string): Category | undefined {
   return CATEGORIES.find((c) => c.slug === slug);

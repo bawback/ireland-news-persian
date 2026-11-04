@@ -11,7 +11,9 @@
 // spaces and common punctuation in between (e.g. "Dublin City Council", "HAP", "Stamp 4", "€1,200").
 // \p{Script=Latin} also covers accented letters such as the É in "RTÉ" or the á in "Dáil";
 // with plain A-Z those letters fell outside the run and the word showed reversed ("ÉRT").
-const LATIN_RUN = /[\p{Script=Latin}€£$][\p{Script=Latin}0-9€£$.,'’&@#%+/:_\- ]*[\p{Script=Latin}0-9%]|\p{Script=Latin}/gu;
+// A run may also start with digits glued to a Latin word ("3Arena", "2FM", "4G"),
+// otherwise the digits are left outside and the name shows as "Arena3".
+const LATIN_RUN = /[0-9]*[\p{Script=Latin}€£$][\p{Script=Latin}0-9€£$.,'’&@#%+/:_\- ]*[\p{Script=Latin}0-9%]|[0-9]*\p{Script=Latin}/gu;
 
 export interface BidiSegment {
   text: string;

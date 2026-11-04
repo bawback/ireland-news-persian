@@ -9,8 +9,7 @@ const NAME_FIXES: [RegExp, string][] = [
   [/[\u0600-\u06FF][\u0600-\u06FF\u200c]*[Dd]?u?blin(?![A-Za-z])/g, "دابلین"],
   [/(?<![\u0600-\u06FF])(?:دوبلین|دبلین|دوب\u200cلین)/g, "دابلین"],
   // The model sometimes slips into Cyrillic letters, e.g. «دублин».
-  [/[\u0600-\u06FF\u200c]*[Дд]?у?блин/g, "دابلین"],
-  [/گар[дd]а/g, "گاردا"],
+  [/[\u0621-\u06D3\u200c]*[\u0400-\u04FF]*\u0431\u043b[\u0400-\u04FF\u0621-\u06D3]*/g, "دابلین"],
   [/بل[\u0621-\u06D3]*f?ast(?![A-Za-z])/g, "بلفاست"],
   [/[\u0621-\u06D3]+(?:anagh|managh)(?![A-Za-z])/g, "فرمانا"],
 ];

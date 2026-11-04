@@ -301,7 +301,8 @@ export async function findUnfamiliarNames(text: string): Promise<{ persian: stri
       system: `You review Persian news text about Ireland. House rule for names:
 - Names well known to Persian readers stay in Persian letters: Ireland, Northern Ireland, the UK, the EU, major cities and counties (Dublin «دابلین», Belfast, Cork, Galway, Limerick, Waterford, Kerry, Donegal, Derry, Louth, Meath, Wicklow etc.), countries, and very well-known people and institutions (the Taoiseach, Simon Harris, Micheál Martin, Mary Lou McDonald, Sinn Féin as «سین فین», Fianna Fáil «فیانا فیل», Fine Gael «فاین گیل», the HSE, Gardaí as «پلیس ایرلند»).
 - Unfamiliar names that look strange or are hard to read in Persian letters must be in English letters: most Irish-language names and words (e.g. Ó Snodaigh, Oireachtas, Fiosrú, Ceann Comhairle, Dáil Éireann), small towns and villages (e.g. Tralee, Enniskillen, Killarney), and lesser-known people, companies and brands.
-List every name in the text that is written in Persian letters but, under this rule, should be in English letters. For each give "persian": the exact Persian spelling as it appears in the text (copy it character for character, without surrounding words or suffixes), and "english": the correct original spelling. If the text already gives the English in parentheses, use that. If you are not sure of the original English spelling, leave the name out. Return an empty list if nothing needs changing.`,
+Only consider proper names that were TRANSLITERATED (copied by sound) into Persian letters, e.g. «آنگوس اوه اسنودایگ», «ترالی», «فیوسرو». Never include names or terms that were TRANSLATED into Persian words (e.g. «اداره مرکزی آمار ایرلند», «دادگاه کیفری ویژه», «جاده کورک», «بیمارستان دانشگاهی کورک», «پلیس ایرلند») — those stay as they are. Never include ordinary Persian words.
+List every such transliterated name in the text that, under this rule, should be in English letters. For each give "persian": the exact Persian spelling as it appears in the text (copy it character for character, without surrounding words or suffixes), and "english": the correct original spelling. Use ONLY an English spelling that appears in the text itself (usually in parentheses after the first mention); copy it exactly. If the text does not contain the English spelling, leave the name out — never guess a spelling. Return an empty list if nothing needs changing.`,
       messages: [{ role: "user", content: text }],
     });
     return (res.parsed_output?.names ?? []).filter(
@@ -309,6 +310,8 @@ List every name in the text that is written in Persian letters but, under this r
         n.persian.trim().length > 1 &&
         text.includes(n.persian) &&
         /\p{Script=Latin}/u.test(n.english) &&
+        // Grounding: the English spelling must already be in the article, so nothing is guessed.
+        text.includes(n.english) &&
         !/[؀-ۿ]/.test(n.english) &&
         n.persian !== "دابلین",
     );

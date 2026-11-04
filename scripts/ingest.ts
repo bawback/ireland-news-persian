@@ -12,7 +12,7 @@ import { createHash } from "node:crypto";
 import { SOURCES, type Source } from "./sources";
 import { fetchFeed, type FeedItem } from "./lib/feeds";
 import { extractArticleText } from "./lib/extract";
-import { classifyItems, writeArticle, WRITER_MODEL, WRITER_MODEL_IMPORTANT, type Classification } from "./lib/ai";
+import { classifyItems, cleanArticle, writeArticle, WRITER_MODEL, WRITER_MODEL_IMPORTANT, type Classification } from "./lib/ai";
 import { adminDb } from "./lib/db";
 import { envBool, envInt } from "./lib/env";
 import { refreshSite } from "./lib/revalidate";
@@ -169,7 +169,8 @@ async function main() {
 
     const important = c.importance >= 4 || c.immigrant_relevance >= 3;
     const model = important ? WRITER_MODEL_IMPORTANT : WRITER_MODEL;
-    const article = await writeArticle({ model, mode, sourceName: s.nameEn, title: it.title, publishedAt: it.publishedAt, text });
+    const written_ = await writeArticle({ model, mode, sourceName: s.nameEn, title: it.title, publishedAt: it.publishedAt, text });
+    const article = written_ && (await cleanArticle(written_));
     if (!article) {
       await db.from("raw_items").update({ status: "failed" }).eq("url", it.url);
       continue;

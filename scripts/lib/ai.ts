@@ -3,6 +3,7 @@ import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { CATEGORIES } from "../../src/lib/categories";
+import { applyWordFixes, findMixedWords, fixPersian } from "./fa-fixes";
 
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 
@@ -116,6 +117,8 @@ WRITING STYLE (Persian)
 - Names of people and places: write them in Persian script, and on FIRST mention add the original English in parentheses, e.g. «سایمون هریس (Simon Harris)»، «کورک (Cork)». After that use the Persian form only.
 - Organisations and acronyms: on first mention give a clear Persian name followed by the original acronym or name in parentheses, e.g. «اداره خدمات مهاجرت ایرلند (ISD)»، «سازمان بهداشت ایرلند (HSE)». Common English terms that immigrants need to recognise (PPS، IRP، Stamp 4، HAP) may stay in English.
 - Money: «۱٬۲۰۰ یورو»، «۳ میلیون پوند». Dates: Gregorian, written in Persian, e.g. «۳۱ اکتبر ۲۰۲۶». Do NOT convert to the Persian (Jalali) calendar.
+- Fixed spellings of common place names (always use exactly these): Dublin = «دابلین» (never «دوبلین»), Cork = «کورک», Galway = «گالوی», Limerick = «لیمریک», Belfast = «بلفاست», Waterford = «واترفورد», Kerry = «کری», Donegal = «دانگال», Derry = «دری», Northern Ireland = «ایرلند شمالی».
+- Every Persian word must be written fully in Persian letters. Never mix Persian and English letters inside one word.
 - Keep English words as separate tokens with normal spaces around them; never glue Persian letters to English words.
 - Neutral, factual tone. No opinions, no speculation, no exaggeration, no clickbait.
 - NEVER add facts, numbers, names or context that are not in the source text. If something is unclear in the source, leave it out and mention it in notes_for_editor.
@@ -203,5 +206,74 @@ export async function writeArticle(input: {
   const out = response.parsed_output;
   if (!out) return null;
   const c = out.confidence.toLowerCase();
-  return { ...out, confidence: c === "high" || c === "medium" ? c : "low" };
+  return {
+    ...out,
+    title_fa: fixPersian(out.title_fa),
+    summary_fa: fixPersian(out.summary_fa),
+    body_fa: fixPersian(out.body_fa),
+    tags: out.tags.map(fixPersian),
+    telegram_post: fixPersian(out.telegram_post),
+    x_post: fixPersian(out.x_post),
+    instagram_caption: fixPersian(out.instagram_caption),
+    whatsapp_post: fixPersian(out.whatsapp_post),
+    confidence: c === "high" || c === "medium" ? c : "low",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 3) Repair: words the writer left half Persian, half English (e.g. «بلفast»)
+// ---------------------------------------------------------------------------
+
+const RepairSchema = z.object({ fixes: z.array(z.object({ broken: z.string(), fixed: z.string() })) });
+
+/**
+ * Asks the cheap model for the correct Persian spelling of each broken word,
+ * using the sentence it appears in. Returns broken → fixed (only safe, fully Persian answers).
+ */
+export async function repairMixedWords(texts: string[]): Promise<Map<string, string>> {
+  const broken = findMixedWords(...texts);
+  const result = new Map<string, string>();
+  if (!broken.length) return result;
+  const joined = texts.join("\n");
+  const items = broken.map((w) => {
+    const i = joined.indexOf(w);
+    return { broken: w, context: joined.slice(Math.max(0, i - 120), i + w.length + 120).replace(/\s+/g, " ") };
+  });
+  try {
+    const res = await client.messages.parse({
+      model: CLASSIFIER_MODEL,
+      max_tokens: 4000,
+      output_config: { effort: "low", format: zodOutputFormat(RepairSchema) },
+      system: `You fix broken words in Persian news text about Ireland. Each "broken" word is a Persian transliteration of a name or word (usually an Irish/English place, person or organisation) that was cut off and finished in English letters, e.g. «بلفast» → «بلفاست», «لیمرick» → «لیمریک», «تralee» → «ترالی», «دوblin» → «دابلین». Use the context to identify the original name. Return the complete standard Persian spelling, written only in Persian letters (keep any Persian suffix such as «‌ها» or a trailing «،»). Dublin is always «دابلین». If the item is really an English word or acronym followed by Persian punctuation or a Persian suffix (e.g. «HSE،», «RTÉها»), return it unchanged apart from inserting a space or ZWNJ between the English part and the Persian part.`,
+      messages: [{ role: "user", content: JSON.stringify(items) }],
+    });
+    for (const f of res.parsed_output?.fixes ?? []) {
+      if (!broken.includes(f.broken) || !f.fixed.trim() || f.fixed === f.broken) continue;
+      // Accept only answers that no longer glue Persian and English letters together.
+      if (findMixedWords(f.fixed).length) continue;
+      result.set(f.broken, f.fixed.trim());
+    }
+  } catch (e) {
+    console.warn("  word repair failed:", String(e).slice(0, 300));
+  }
+  return result;
+}
+
+/** Runs the regex fixes and the AI word repair over every Persian field of a written article. */
+export async function cleanArticle(a: WrittenArticle): Promise<WrittenArticle> {
+  const fields = [a.title_fa, a.summary_fa, a.body_fa, a.telegram_post, a.x_post, a.instagram_caption, a.whatsapp_post, ...a.tags];
+  const fixes = await repairMixedWords(fields);
+  if (fixes.size) console.log("  repaired words:", [...fixes].map(([b, f]) => `${b}→${f}`).join(", "));
+  const fix = (t: string) => applyWordFixes(t, fixes);
+  return {
+    ...a,
+    title_fa: fix(a.title_fa),
+    summary_fa: fix(a.summary_fa),
+    body_fa: fix(a.body_fa),
+    tags: a.tags.map(fix),
+    telegram_post: fix(a.telegram_post),
+    x_post: fix(a.x_post),
+    instagram_caption: fix(a.instagram_caption),
+    whatsapp_post: fix(a.whatsapp_post),
+  };
 }

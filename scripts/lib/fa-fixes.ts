@@ -10,8 +10,25 @@ const NAME_FIXES: [RegExp, string][] = [
   [/(?<![\u0600-\u06FF])(?:دوبلین|دبلین|دوب\u200cلین)/g, "دابلین"],
 ];
 
-/** Persian letters stuck directly to Latin letters (a sign of a broken word). Used for reporting. */
-export const MIXED_WORD = /[؀-ۿ]+[A-Za-z]+[؀-ۿ]*|[A-Za-z]+[؀-ۿ]+/g;
+/**
+ * A word where Persian letters are glued directly to Latin letters, e.g. «بلفast» or «کالیnan».
+ * The model sometimes stops transliterating a name halfway. Punctuation such as «HSE،» is not counted.
+ */
+export const MIXED_WORD = /[\u0621-\u06D3\u200c]*[\u0621-\u06D3][\p{Script=Latin}]+[\u0621-\u06D3\u200c]*|[\p{Script=Latin}]+[\u0621-\u06D3][\u0621-\u06D3\u200c]*/gu;
+
+export function findMixedWords(...texts: string[]): string[] {
+  const found = new Set<string>();
+  for (const t of texts) if (t) for (const m of t.matchAll(MIXED_WORD)) found.add(m[0]);
+  return [...found];
+}
+
+/** Replaces each broken word everywhere in the text. */
+export function applyWordFixes(text: string, fixes: Map<string, string>): string {
+  if (!text || !fixes.size) return text;
+  let out = text;
+  for (const [broken, fixed] of fixes) out = out.split(broken).join(fixed);
+  return out;
+}
 
 /**
  * Applies the fixes to Persian text. English runs that are a full word "Dublin"

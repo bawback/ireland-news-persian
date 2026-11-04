@@ -9,7 +9,9 @@
 
 // A run that starts and ends with a Latin letter or digit and may contain
 // spaces and common punctuation in between (e.g. "Dublin City Council", "HAP", "Stamp 4", "€1,200").
-const LATIN_RUN = /[A-Za-z€£$][A-Za-z0-9€£$.,'’&@#%+/:_\- ]*[A-Za-z0-9%]|[A-Za-z]/g;
+// \p{Script=Latin} also covers accented letters such as the É in "RTÉ" or the á in "Dáil";
+// with plain A-Z those letters fell outside the run and the word showed reversed ("ÉRT").
+const LATIN_RUN = /[\p{Script=Latin}€£$][\p{Script=Latin}0-9€£$.,'’&@#%+/:_\- ]*[\p{Script=Latin}0-9%]|\p{Script=Latin}/gu;
 
 export interface BidiSegment {
   text: string;

@@ -8,6 +8,7 @@ import { adminDb } from "./lib/db";
 import { envInt, envOptional } from "./lib/env";
 import { AI_IMAGE_CREDIT, ImageServiceUnavailable, planImage, renderImage } from "./lib/images";
 import { refreshSite } from "./lib/revalidate";
+import { fixPersian } from "./lib/fa-fixes";
 
 const BUCKET = "news-images";
 
@@ -60,7 +61,7 @@ async function main() {
     }
     const url = db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 
-    const update = { image_url: url, image_credit: AI_IMAGE_CREDIT, image_alt: plan.alt_fa.trim() };
+    const update = { image_url: url, image_credit: AI_IMAGE_CREDIT, image_alt: fixPersian(plan.alt_fa.trim()) };
     let { error: updErr } = await db.from("articles").update(update).eq("id", a.id);
     if (updErr && /image_alt/.test(updErr.message)) {
       // The image_alt column has not been added yet: save without it.

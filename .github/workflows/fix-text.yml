@@ -22,6 +22,7 @@ jobs:
       - run: npx tsx scripts/fix-text.ts
         env:
           APPLY: ${{ inputs.apply }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SITE_URL: ${{ vars.SITE_URL }}

@@ -4,7 +4,8 @@
  */
 import { adminDb } from "./lib/db";
 import { envBool } from "./lib/env";
-import { fixPersian, MIXED_WORD } from "./lib/fa-fixes";
+import { applyWordFixes, findMixedWords, fixPersian } from "./lib/fa-fixes";
+import { repairMixedWords } from "./lib/ai";
 import { refreshSite } from "./lib/revalidate";
 
 type Row = Record<string, unknown> & { id: string; slug: string; social: Record<string, string> | null; tags: string[] | null };
@@ -26,26 +27,25 @@ async function main() {
   let changedCount = 0;
   for (const r of rows) {
     const update: Record<string, unknown> = {};
-    for (const f of TEXT_FIELDS) {
-      const v = r[f];
-      if (typeof v !== "string") continue;
-      const fixed = fixPersian(v);
-      if (fixed !== v) update[f] = fixed;
+    // 1) fixed rules (Dublin → دابلین ...)
+    const texts: Record<string, string> = {};
+    for (const f of TEXT_FIELDS) if (typeof r[f] === "string") texts[f] = fixPersian(r[f] as string);
+    const social = Object.fromEntries(Object.entries(r.social ?? {}).map(([k, v]) => [k, typeof v === "string" ? fixPersian(v) : v]));
+    let tags = (r.tags ?? []).map(fixPersian);
+    // 2) AI repair of other half-Persian, half-English words
+    const all = [...Object.values(texts), ...Object.values(social).filter((v): v is string => typeof v === "string"), ...tags];
+    if (findMixedWords(...all).length) {
+      const fixes = await repairMixedWords(all);
+      if (fixes.size) console.log(`  ${r.slug}:`, [...fixes].map(([b, f]) => `${b}→${f}`).join("  "));
+      for (const f of Object.keys(texts)) texts[f] = applyWordFixes(texts[f], fixes);
+      for (const k of Object.keys(social)) if (typeof social[k] === "string") social[k] = applyWordFixes(social[k], fixes);
+      tags = tags.map((t) => applyWordFixes(t, fixes));
     }
-    if (r.social) {
-      const social = Object.fromEntries(Object.entries(r.social).map(([k, v]) => [k, typeof v === "string" ? fixPersian(v) : v]));
-      if (JSON.stringify(social) !== JSON.stringify(r.social)) update.social = social;
-    }
-    if (r.tags?.length) {
-      const tags = r.tags.map(fixPersian);
-      if (tags.join("|") !== r.tags.join("|")) update.tags = tags;
-    }
-    // Other Persian+Latin glued words that no rule covers yet, for a human to look at.
-    const after = { ...r, ...update };
-    for (const f of TEXT_FIELDS) {
-      const v = after[f];
-      if (typeof v === "string") for (const m of v.matchAll(MIXED_WORD)) leftovers.set(m[0], (leftovers.get(m[0]) ?? 0) + 1);
-    }
+    for (const f of Object.keys(texts)) if (texts[f] !== r[f]) update[f] = texts[f];
+    if (r.social && JSON.stringify(social) !== JSON.stringify(r.social)) update.social = social;
+    if (r.tags && tags.join("|") !== r.tags.join("|")) update.tags = tags;
+    // Anything still left, for a human to look at.
+    for (const w of findMixedWords(...Object.values(texts))) leftovers.set(w, (leftovers.get(w) ?? 0) + 1);
     if (!Object.keys(update).length) continue;
     changedCount++;
     console.log(`• ${r.slug}: ${Object.keys(update).join(", ")}`);

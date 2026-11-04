@@ -30,7 +30,16 @@ export interface Source {
 export const SOURCES: Source[] = [
   // --- Entertainment, lifestyle, what's on (media) ---
   { id: "joe", name: "جو", nameEn: "JOE.ie", feed: "https://www.joe.ie/feed", kind: "media", hint: "entertainment", priority: 5, verify: true },
-  { id: "lovin", name: "لاوین دابلین", nameEn: "Lovin Dublin", feed: "https://lovin.ie/feed", kind: "media", hint: "entertainment", priority: 5, verify: true },
+  { id: "lovin", name: "لاوین دابلین", nameEn: "Lovin A", feed: "https://www.lovindublin.com/feed", kind: "media", hint: "entertainment", priority: 5, verify: true },
+  { id: "lovin2", name: "لاوین دابلین", nameEn: "Lovin B", feed: "https://lovin.ie/rss", kind: "media", hint: "entertainment", priority: 5, verify: true },
+  { id: "lovin3", name: "لاوین دابلین", nameEn: "Lovin C", feed: "https://www.lovindublin.com/rss", kind: "media", hint: "entertainment", priority: 5, verify: true },
+  { id: "lovin4", name: "لاوین دابلین", nameEn: "Lovin D", feed: "https://lovin.ie/feeds/rss", kind: "media", hint: "entertainment", priority: 5, verify: true },
+  { id: "her2", name: "هر", nameEn: "Her B", feed: "https://www.her.ie/feed/", kind: "media", hint: "entertainment", priority: 4, verify: true },
+  { id: "vm2", name: "v", nameEn: "VM B", feed: "https://www.virginmediatelevision.ie/news/rss", kind: "media", priority: 7, verify: true },
+  { id: "vm3", name: "v", nameEn: "VM C", feed: "https://www.virginmedianews.ie/rss", kind: "media", priority: 7, verify: true },
+  { id: "vm4", name: "v", nameEn: "VM D", feed: "https://www.virginmediatelevision.ie/feed", kind: "media", priority: 7, verify: true },
+  { id: "eie2", name: "e", nameEn: "entertainment.ie B", feed: "https://entertainment.ie/music/feed/", kind: "media", priority: 7, verify: true },
+  { id: "district", name: "d", nameEn: "District Magazine", feed: "https://districtmagazine.ie/feed/", kind: "media", priority: 4, verify: true },
   { id: "her", name: "هر", nameEn: "Her.ie", feed: "https://www.her.ie/feed", kind: "media", hint: "entertainment", priority: 4, verify: true },
   { id: "entertainment-ie", name: "انترتینمنت", nameEn: "entertainment.ie", feed: "https://entertainment.ie/feed/", kind: "media", hint: "entertainment", priority: 5, verify: true },
   { id: "rte-entertainment", name: "آر‌تی‌ای", nameEn: "RTÉ Entertainment", feed: "https://www.rte.ie/feeds/rss/?index=/entertainment/", kind: "media", hint: "entertainment", priority: 6, verify: true },

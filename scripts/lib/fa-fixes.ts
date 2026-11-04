@@ -8,6 +8,9 @@
 const NAME_FIXES: [RegExp, string][] = [
   [/[\u0600-\u06FF][\u0600-\u06FF\u200c]*[Dd]?u?blin(?![A-Za-z])/g, "دابلین"],
   [/(?<![\u0600-\u06FF])(?:دوبلین|دبلین|دوب\u200cلین)/g, "دابلین"],
+  // The model sometimes slips into Cyrillic letters, e.g. «دублин».
+  [/[\u0600-\u06FF\u200c]*[Дд]?у?блин/g, "دابلین"],
+  [/گар[дd]а/g, "گاردا"],
   [/بل[\u0621-\u06D3]*f?ast(?![A-Za-z])/g, "بلفاست"],
   [/[\u0621-\u06D3]+(?:anagh|managh)(?![A-Za-z])/g, "فرمانا"],
 ];
@@ -16,7 +19,8 @@ const NAME_FIXES: [RegExp, string][] = [
  * A word where Persian letters are glued directly to Latin letters, e.g. «بلفast» or «کالیnan».
  * The model sometimes stops transliterating a name halfway. Punctuation such as «HSE،» is not counted.
  */
-export const MIXED_WORD = /[\u0621-\u06D3\u200c]*[\u0621-\u06D3][\p{Script=Latin}]+[\u0621-\u06D3\u200c]*|[\p{Script=Latin}]+[\u0621-\u06D3][\u0621-\u06D3\u200c]*/gu;
+export const MIXED_WORD =
+  /[\u0621-\u06D3\u200c]*[\u0621-\u06D3][\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}]+[\u0621-\u06D3\u200c]*|[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}]+[\u0621-\u06D3][\u0621-\u06D3\u200c]*|[\p{Script=Cyrillic}\p{Script=Greek}]+/gu;
 
 export function findMixedWords(...texts: string[]): string[] {
   const found = new Set<string>();

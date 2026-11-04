@@ -125,7 +125,7 @@ WRITING STYLE (Persian)
 - Organisations and acronyms: on first mention give a clear Persian name followed by the original acronym or name in parentheses, e.g. «اداره خدمات مهاجرت ایرلند (ISD)»، «سازمان بهداشت ایرلند (HSE)». Common English terms that immigrants need to recognise (PPS، IRP، Stamp 4، HAP) may stay in English.
 - Money: «۱٬۲۰۰ یورو»، «۳ میلیون پوند». Dates: Gregorian, written in Persian, e.g. «۳۱ اکتبر ۲۰۲۶». Do NOT convert to the Persian (Jalali) calendar.
 - Fixed spellings of common place names (always use exactly these): Dublin = «دابلین» (never «دوبلین»), Cork = «کورک», Galway = «گالوی», Limerick = «لیمریک», Belfast = «بلفاست», Waterford = «واترفورد», Kerry = «کری», Donegal = «دانگال», Derry = «دری», Northern Ireland = «ایرلند شمالی».
-- Every Persian word must be written fully in Persian letters. Never mix Persian and English letters inside one word.
+- Every Persian word must be written fully in Persian letters. Never mix Persian and English letters inside one word, and never use Cyrillic, Greek or any other alphabet.
 - Keep English words as separate tokens with normal spaces around them; never glue Persian letters to English words.
 - Neutral, factual tone. No opinions, no speculation, no exaggeration, no clickbait.
 - NEVER add facts, numbers, names or context that are not in the source text. If something is unclear in the source, leave it out and mention it in notes_for_editor.
@@ -267,7 +267,7 @@ export async function repairMixedWords(texts: string[]): Promise<Map<string, str
     });
     for (const f of res.parsed_output?.fixes ?? []) {
       if (!broken.includes(f.broken) || !f.fixed.trim() || f.fixed === f.broken) continue;
-      // Accept only answers that no longer glue Persian and English letters together.
+      // Accept only answers that no longer glue Persian and English letters together (or contain Cyrillic).
       if (findMixedWords(f.fixed).length) continue;
       result.set(f.broken, f.fixed.trim());
     }

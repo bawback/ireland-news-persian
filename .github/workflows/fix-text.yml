@@ -7,6 +7,10 @@ on:
         description: "Save the changes (otherwise only report them)"
         type: boolean
         default: false
+      names:
+        description: "Also move unfamiliar names to English letters"
+        type: boolean
+        default: false
 
 jobs:
   run:
@@ -22,6 +26,7 @@ jobs:
       - run: npx tsx scripts/fix-text.ts
         env:
           APPLY: ${{ inputs.apply }}
+          NAMES: ${{ inputs.names }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

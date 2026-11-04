@@ -5,11 +5,13 @@
 import { adminDb } from "./lib/db";
 import { envBool } from "./lib/env";
 import { applyWordFixes, findMixedWords, fixPersian } from "./lib/fa-fixes";
-import { repairMixedWords } from "./lib/ai";
+import { applyNameStyle, findUnfamiliarNames, repairMixedWords } from "./lib/ai";
 import { refreshSite } from "./lib/revalidate";
 
 type Row = Record<string, unknown> & { id: string; slug: string; social: Record<string, string> | null; tags: string[] | null };
 const TEXT_FIELDS = ["title_fa", "summary_fa", "body_fa", "image_alt"] as const;
+
+const NAMES = envBool("NAMES", false);
 
 async function main() {
   const apply = envBool("APPLY", false);
@@ -40,6 +42,16 @@ async function main() {
       for (const f of Object.keys(texts)) texts[f] = applyWordFixes(texts[f], fixes);
       for (const k of Object.keys(social)) if (typeof social[k] === "string") social[k] = applyWordFixes(social[k], fixes);
       tags = tags.map((t) => applyWordFixes(t, fixes));
+    }
+    // 3) optional: unfamiliar names back to English letters
+    if (NAMES) {
+      const names = await findUnfamiliarNames([texts.title_fa, texts.summary_fa, texts.body_fa].filter(Boolean).join("\n\n"));
+      if (names.length) {
+        console.log(`  ${r.slug}:`, names.map((n) => `${n.persian}→${n.english}`).join("  "));
+        for (const f of Object.keys(texts)) texts[f] = applyNameStyle(texts[f], names);
+        for (const k of Object.keys(social)) if (typeof social[k] === "string") social[k] = applyNameStyle(social[k], names);
+        tags = tags.map((t) => applyNameStyle(t, names));
+      }
     }
     for (const f of Object.keys(texts)) if (texts[f] !== r[f]) update[f] = texts[f];
     if (r.social && JSON.stringify(social) !== JSON.stringify(r.social)) update.social = social;

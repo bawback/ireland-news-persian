@@ -280,3 +280,53 @@ export async function cleanArticle(a: WrittenArticle): Promise<WrittenArticle> {
     whatsapp_post: fix(a.whatsapp_post),
   };
 }
+
+// ---------------------------------------------------------------------------
+// 4) Name style: unfamiliar names back to English letters (for older articles)
+// ---------------------------------------------------------------------------
+
+const NamesSchema = z.object({ names: z.array(z.object({ persian: z.string(), english: z.string() })) });
+
+/**
+ * Finds names written in Persian letters that should be in English letters under the
+ * name rule (unfamiliar Irish-language names, small towns, lesser-known people/companies).
+ * Returns pairs that are safe to replace: the Persian form appears in the text, the English is Latin.
+ */
+export async function findUnfamiliarNames(text: string): Promise<{ persian: string; english: string }[]> {
+  try {
+    const res = await client.messages.parse({
+      model: CLASSIFIER_MODEL,
+      max_tokens: 4000,
+      output_config: { effort: "low", format: zodOutputFormat(NamesSchema) },
+      system: `You review Persian news text about Ireland. House rule for names:
+- Names well known to Persian readers stay in Persian letters: Ireland, Northern Ireland, the UK, the EU, major cities and counties (Dublin «دابلین», Belfast, Cork, Galway, Limerick, Waterford, Kerry, Donegal, Derry, Louth, Meath, Wicklow etc.), countries, and very well-known people and institutions (the Taoiseach, Simon Harris, Micheál Martin, Mary Lou McDonald, Sinn Féin as «سین فین», Fianna Fáil «فیانا فیل», Fine Gael «فاین گیل», the HSE, Gardaí as «پلیس ایرلند»).
+- Unfamiliar names that look strange or are hard to read in Persian letters must be in English letters: most Irish-language names and words (e.g. Ó Snodaigh, Oireachtas, Fiosrú, Ceann Comhairle, Dáil Éireann), small towns and villages (e.g. Tralee, Enniskillen, Killarney), and lesser-known people, companies and brands.
+List every name in the text that is written in Persian letters but, under this rule, should be in English letters. For each give "persian": the exact Persian spelling as it appears in the text (copy it character for character, without surrounding words or suffixes), and "english": the correct original spelling. If the text already gives the English in parentheses, use that. If you are not sure of the original English spelling, leave the name out. Return an empty list if nothing needs changing.`,
+      messages: [{ role: "user", content: text }],
+    });
+    return (res.parsed_output?.names ?? []).filter(
+      (n) =>
+        n.persian.trim().length > 1 &&
+        text.includes(n.persian) &&
+        /\p{Script=Latin}/u.test(n.english) &&
+        !/[؀-ۿ]/.test(n.english) &&
+        n.persian !== "دابلین",
+    );
+  } catch (e) {
+    console.warn("  name review failed:", String(e).slice(0, 300));
+    return [];
+  }
+}
+
+/** Replaces «persian (English)» with «English», then any other «persian» with «English». */
+export function applyNameStyle(text: string, names: { persian: string; english: string }[]): string {
+  if (!text) return text;
+  let out = text;
+  for (const { persian, english } of [...names].sort((a, b) => b.persian.length - a.persian.length)) {
+    const esc = persian.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp(`${esc}\\s*\\(${english.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)`, "g"), english);
+    // Only whole words: not inside a longer Persian word.
+    out = out.replace(new RegExp(`(?<![\\u0621-\\u06D3])${esc}(?![\\u0621-\\u06D3])`, "g"), english);
+  }
+  return out;
+}

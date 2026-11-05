@@ -22,7 +22,7 @@ CONTENT
 - Only use facts that are in the articles. Do not add, guess or change facts.
 - intro: greet («سلام، شب‌تون بخیر» style, friendly but professional), say this is «${PODCAST_NAME}» from «اخبار ایرلند به فارسی», then read the headlines of tonight's stories in one or two short sentences.
 - stories: for each article, "headline" is a short spoken headline (one sentence), "text" is 2–4 short sentences with the most important points: what happened, who it affects, what happens next. Smooth spoken transitions are welcome («و اما خبر بعدی...»).
-- outro: a short sign-off: invite listeners to read the full stories on the website and in the Telegram channel «اخبار ایرلند به فارسی», say good night.
+- outro: a short sign-off: invite listeners to read the full stories on the website and in the Telegram channel «اخبار ایرلند به فارسی», say good night, ending with the show name as the sign-off, e.g. «... تا فردا شب، شب بخیر ایرلند!».
 - Total length 350–550 Persian words (about 3 minutes).
 - episode_title: «${PODCAST_NAME}» is NOT included; a short title naming the top story or two (max 10 words).
 - description: 1–2 sentences for the podcast page listing the main topics.

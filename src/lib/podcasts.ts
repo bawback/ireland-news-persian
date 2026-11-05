@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { cacheLife, cacheTag } from "next/cache";
 
 export const PODCAST = {
-  name: process.env.NEXT_PUBLIC_PODCAST_NAME || "ایرلند امشب",
+  name: process.env.NEXT_PUBLIC_PODCAST_NAME || "شب بخیر ایرلند",
   tagline: "مرور مهم‌ترین خبرهای امروز ایرلند به فارسی، هر شب ساعت ۱۰",
 };
 

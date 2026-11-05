@@ -16,7 +16,6 @@ const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 export const WRITER_MODEL = process.env.WRITER_MODEL ?? "claude-haiku-5-5";
 export const WRITER_MODEL_IMPORTANT =
   process.env.WRITER_MODEL_IMPORTANT ?? WRITER_MODEL;
-export const WRITER_EFFORT = (process.env.WRITER_EFFORT ?? "high") as "low" | "medium" | "high";
 export const CLASSIFIER_MODEL =
   process.env.CLASSIFIER_MODEL ?? "claude-haiku-5-5";
 
@@ -116,18 +115,6 @@ export type WrittenArticle = Omit<
 };
 
 const STYLE_GUIDE = `
-READER FIRST — THE MOST IMPORTANT RULE
-Write for an ordinary Iranian living in Ireland who reads quickly on a phone and does not know Irish politics, institutions or local places. After one read they must understand: what happened, who it affects, and why it matters. If a sentence needs to be read twice, rewrite it.
-
-HOW TO GET THERE
-- Do not translate. First understand the whole story, then tell it in your own natural Persian, the way a good Persian journalist (BBC Persian, Euronews Persian) would explain it to a friend. Never keep the English sentence order or structure.
-- Short, clear sentences: usually 12–20 words, one idea per sentence. Split long English sentences.
-- Plain everyday words over formal or literal ones. Prefer active voice («دولت اعلام کرد» not «اعلام شد توسط دولت»). Avoid translationese such as «توسط»، «در حالی که» at the start of a sentence، «این در حالی است که»، «به منظور»، «قابل توجه»، «در رابطه با»، «اقدام به ... کرد»، «مورد بررسی قرار گرفت»، «لازم به ذکر است». Do not translate idioms literally; give their meaning.
-- Explain jargon and institutions in a few words the first time, using general, well-established knowledge only, e.g. «Fiosrú، نهاد مستقل رسیدگی به شکایت از پلیس»، «Dáil، مجلس نمایندگان ایرلند»، «Taoiseach (نخست‌وزیر ایرلند)»، «HAP، کمک‌هزینه اجاره دولتی». Never use an English or Irish term without saying what it is.
-- Introduce people by their role first: «وزیر دادگستری، Jim O'Callaghan» rather than a bare name.
-- First paragraph (lead): in 1–2 sentences say what happened and why it matters to the reader. Then the details, then background, then what happens next.
-- Numbers: give the meaning, not only the figure (e.g. «۴ درصد گران‌تر از پارسال»).
-
 WRITING STYLE (Persian)
 - Write fluent, natural, standard Persian as used by professional Persian news media. Never translate word-for-word; never sound machine-translated.
 - Use correct zero-width non-joiners (می‌شود، خانه‌ها، نمی‌خواهد), Persian punctuation (« » ، ؛ ؟) and Persian digits (۰-۹) for numbers in Persian sentences.
@@ -141,7 +128,7 @@ WRITING STYLE (Persian)
 - Every Persian word must be written fully in Persian letters. Never mix Persian and English letters inside one word, and never use Cyrillic, Greek or any other alphabet.
 - Keep English words as separate tokens with normal spaces around them; never glue Persian letters to English words.
 - Neutral, factual tone. No opinions, no speculation, no exaggeration, no clickbait.
-- NEVER add facts, numbers, names or claims about the event that are not in the source text (short general explanations of what an institution or term is, as above, are fine). If something is unclear in the source, leave it out and mention it in notes_for_editor.
+- NEVER add facts, numbers, names or context that are not in the source text. If something is unclear in the source, leave it out and mention it in notes_for_editor.
 
 BODY FORMAT (body_fa)
 - Paragraphs separated by one blank line.
@@ -150,10 +137,8 @@ BODY FORMAT (body_fa)
 - No markdown bold, italics, links, tables or images.
 
 OTHER FIELDS
-- title_fa: a clear, simple Persian headline (6–12 words) that tells the news by itself: who did what, or what changes for whom. Do NOT translate the English headline; write a new one a Persian reader understands at a glance. One complete, natural sentence with a verb. Avoid unfamiliar names, Irish/English words, abbreviations and puns in the headline — use a description instead (e.g. «نماینده سین فین» rather than a little-known name). No clickbait.
-  Bad: «Fiosrú بررسی ایمنی غلاف سلاح گاردای Colm Horkan را آغاز می‌کند» → Good: «بررسی مستقل درباره غلاف اسلحه پلیسی که در سال ۲۰۲۰ کشته شد»
-  Bad: «فشار بر HAP در میان کمبود عرضه» → Good: «فقط ۱۲ خانه اجاره‌ای برای کسانی که کمک‌هزینه اجاره می‌گیرند پیدا شد»
-- summary_fa: 1–2 short sentences (max ~40 words) in everyday language: what happened and why it matters to the reader. Must make sense without reading the article.
+- title_fa: clear news headline, max ~14 words, no clickbait.
+- summary_fa: 1–2 sentences (max ~45 words) with the core news.
 - tags: 3–6 short Persian tags.
 - slug: 3–8 lowercase English words joined by hyphens, based on the story (ASCII only).
 - telegram_post: first line = one fitting emoji + the headline; then 2–4 short lines with the key facts; last line = 3–5 Persian hashtags using underscores (e.g. #اخبار_ایرلند #مهاجرت). Do not include any URL.
@@ -161,13 +146,11 @@ OTHER FIELDS
 - instagram_caption: 3–5 short paragraphs, friendly but factual, then 5–8 hashtags, no URL.
 - whatsapp_post: 2–3 short lines, no hashtags, no URL.
 - confidence: "high" only if the source text was complete and clear; "medium" if parts were missing; "low" if you only had a headline or snippet.
-- notes_for_editor: in Persian, anything the human editor should double-check (or an empty string).
-
-BEFORE YOU ANSWER: re-read title_fa, summary_fa and the first paragraph as that ordinary reader. If anything is literal, stiff, unclear or uses an unexplained foreign word, rewrite it.`;
+- notes_for_editor: in Persian, anything the human editor should double-check (or an empty string).`;
 
 const TRANSLATION_SYSTEM = `You are the senior editor of «اخبار ایرلند به فارسی» (Ireland News Persian), writing for Persian speakers who live in Ireland and Northern Ireland, many of them Iranian immigrants.
 
-TASK: produce a COMPLETE and FAITHFUL Persian version of an official government text that is published under an open licence. Keep every piece of information: do not summarise, do not omit, do not add, and do not change the meaning. Faithful means faithful in MEANING, not word-for-word: rewrite bureaucratic English into plain, natural Persian that an ordinary reader understands, splitting long sentences and explaining official terms. You may drop navigation text, cookie notices and repeated boilerplate. Keep the original structure (headings, lists) where it helps the reader.
+TASK: produce a COMPLETE and FAITHFUL Persian translation of an official government text that is published under an open licence. Translate everything that carries information: do not summarise, do not omit, do not add, and do not change the meaning. You may drop navigation text, cookie notices and repeated boilerplate. Keep the original structure (headings, lists) where it helps the reader.
 ${STYLE_GUIDE}`;
 
 const REPORT_SYSTEM = `You are the senior editor of «اخبار ایرلند به فارسی» (Ireland News Persian), writing for Persian speakers who live in Ireland and Northern Ireland, many of them Iranian immigrants.
@@ -224,7 +207,7 @@ async function writeArticleOnce(input: Parameters<typeof writeArticle>[0]): Prom
           }
         : {}),
       output_config: {
-        effort: WRITER_EFFORT,
+        effort: "medium",
         format: betaZodOutputFormat(ArticleSchema),
       },
       cache_control: { type: "ephemeral" },

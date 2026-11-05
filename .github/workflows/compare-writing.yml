@@ -1,0 +1,34 @@
+name: Compare writing (old vs new)
+
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: "Comma-separated models"
+        default: "claude-haiku-5-5,claude-sonnet-5-5"
+      count:
+        description: "How many recent articles"
+        default: "4"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/compare-writing.ts
+        env:
+          COMPARE_MODELS: ${{ inputs.models }}
+          COMPARE_COUNT: ${{ inputs.count }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compare
+          path: compare.md

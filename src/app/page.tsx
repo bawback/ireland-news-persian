@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
 import Link from "next/link";
 import { GUIDES } from "@/content/guides";
+import { getEpisodes, minutes, PODCAST } from "@/lib/podcasts";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -38,7 +39,8 @@ const siteJsonLd = [
 export default async function HomePage() {
   "use cache";
   cacheLife("minutes");
-  const [latest, immigrant] = await Promise.all([getLatest(30), getImmigrantHighlights(6)]);
+  const [latest, immigrant, episodes] = await Promise.all([getLatest(30), getImmigrantHighlights(6), getEpisodes(1)]);
+  const episode = episodes[0];
   const [lead, ...rest] = latest;
   const side = rest.slice(0, 5);
   const grid = rest.slice(5);
@@ -71,6 +73,17 @@ export default async function HomePage() {
               <ArticleCard key={a.id} a={a} />
             ))}
           </div>
+        </section>
+      )}
+
+      {episode && (
+        <section className="flex flex-col gap-3 rounded-2xl border border-brand/30 bg-brand-soft p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xl font-black">🎙 {PODCAST.name}</h2>
+            <Link href="/podcast" className="text-sm font-semibold text-brand hover:underline">همه قسمت‌ها ←</Link>
+          </div>
+          <p className="leading-8">{episode.title} · <span className="text-muted">{minutes(episode.duration_sec)}</span></p>
+          <audio controls preload="none" src={episode.audio_url} className="w-full" />
         </section>
       )}
 

@@ -13,6 +13,7 @@ const client = new Anthropic(); // reads ANTHROPIC_API_KEY
  *  - important stories (importance >= 4, or essential for immigrants): set WRITER_MODEL_IMPORTANT
  *    to "claude-sonnet-5-5" or "claude-opus-5-5" for higher quality when the budget allows.
  */
+export const PODCAST_NAME = process.env.PODCAST_NAME ?? "ایرلند امشب";
 export const WRITER_MODEL = process.env.WRITER_MODEL ?? "claude-haiku-5-5";
 export const WRITER_MODEL_IMPORTANT =
   process.env.WRITER_MODEL_IMPORTANT ?? WRITER_MODEL;

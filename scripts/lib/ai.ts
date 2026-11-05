@@ -199,6 +199,16 @@ export async function writeArticle(input: {
   /** Fun / entertainment / event story: lighter, friendlier tone. */
   light?: boolean;
 }): Promise<WrittenArticle | null> {
+  // The small model occasionally returns broken JSON; one retry fixes almost all of those.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const r = await writeArticleOnce(input);
+    if (r !== "retry") return r;
+    if (attempt === 1) console.warn("  retrying writer once…");
+  }
+  return null;
+}
+
+async function writeArticleOnce(input: Parameters<typeof writeArticle>[0]): Promise<WrittenArticle | null | "retry"> {
   const model = input.model ?? WRITER_MODEL;
   // Server-side refusal fallbacks exist for Opus and Sonnet, not for Haiku.
   const supportsFallback = /opus|sonnet/.test(model);
@@ -228,7 +238,7 @@ export async function writeArticle(input: {
     });
   } catch (e) {
     console.warn(`  writer failed: ${input.title}:`, String(e).slice(0, 300));
-    return null;
+    return /parse structured output|JSON/i.test(String(e)) ? "retry" : null;
   }
   if (response.stop_reason === "refusal") {
     console.warn(`  refused: ${input.title}`);

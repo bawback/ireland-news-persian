@@ -27,11 +27,49 @@ function elevenlabs(key: string, voiceId: string): TtsProvider {
 
 const xmlEsc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-function azure(key: string, region: string): TtsProvider {
+// Regions to try when the configured one rejects the key (a key only works in its own region).
+const AZURE_REGIONS = [
+  "northeurope", "westeurope", "uksouth", "ukwest", "swedencentral", "francecentral", "germanywestcentral",
+  "switzerlandnorth", "norwayeast", "polandcentral", "italynorth", "spaincentral", "eastus", "eastus2", "westus",
+  "westus2", "westus3", "centralus", "northcentralus", "southcentralus", "westcentralus", "canadacentral",
+  "canadaeast", "brazilsouth", "southeastasia", "eastasia", "japaneast", "japanwest", "koreacentral",
+  "australiaeast", "centralindia", "southindia", "uaenorth", "qatarcentral", "southafricanorth",
+];
+
+async function keyWorksIn(key: string, region: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, {
+      method: "POST",
+      headers: { "Ocp-Apim-Subscription-Key": key, "Content-Length": "0" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function findAzureRegion(key: string, preferred: string): Promise<string> {
+  if (await keyWorksIn(key, preferred)) return preferred;
+  for (const r of AZURE_REGIONS) {
+    if (r !== preferred && (await keyWorksIn(key, r))) {
+      console.log(`Azure key belongs to region "${r}", not "${preferred}". Using "${r}". (Set AZURE_SPEECH_REGION=${r} to skip this check.)`);
+      return r;
+    }
+  }
+  throw new Error(
+    `Azure rejected AZURE_SPEECH_KEY in every region (key length ${key.length}). Re-copy KEY 1 from the Speech resource's "Keys and Endpoint" page.`,
+  );
+}
+
+function azure(key: string, preferredRegion: string): TtsProvider {
   const voice = envOptional("AZURE_VOICE") ?? "fa-IR-FaridNeural";
+  let regionP: Promise<string> | null = null;
   return {
     name: `Azure (${voice})`,
     async speak(text) {
+      regionP ??= findAzureRegion(key, preferredRegion);
+      const region = await regionP;
       const ssml = `<speak version="1.0" xml:lang="fa-IR"><voice name="${voice}"><prosody rate="-4%">${xmlEsc(text)}</prosody></voice></speak>`;
       const res = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
         method: "POST",
@@ -54,8 +92,8 @@ export function ttsProvider(): TtsProvider | null {
   const elKey = envOptional("ELEVENLABS_API_KEY");
   const elVoice = envOptional("ELEVENLABS_VOICE_ID");
   if (elKey && elVoice) return elevenlabs(elKey, elVoice);
-  const azKey = envOptional("AZURE_SPEECH_KEY");
-  const azRegion = envOptional("AZURE_SPEECH_REGION");
-  if (azKey && azRegion) return azure(azKey, azRegion);
+  const azKey = envOptional("AZURE_SPEECH_KEY")?.trim();
+  const azRegion = envOptional("AZURE_SPEECH_REGION")?.trim().toLowerCase().replace(/\s+/g, "") || "northeurope";
+  if (azKey) return azure(azKey, azRegion);
   return null;
 }

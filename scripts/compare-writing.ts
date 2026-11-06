@@ -9,9 +9,6 @@ import { envInt } from "./lib/env";
 import { extractArticleText } from "./lib/extract";
 import { cleanArticle, writeArticle } from "./lib/ai";
 
-const firstParas = (body: string, n = 2) =>
-  body.split(/\n\s*\n/).filter((p) => p.trim() && !p.startsWith("## ")).slice(0, n).join("\n\n");
-
 async function main() {
   const models = (process.env.COMPARE_MODELS ?? "claude-haiku-5-5,claude-sonnet-5-5").split(",").map((m) => m.trim());
   // COMPARE_VOICES="default,babak" compares voices; each model × voice is written.
@@ -36,16 +33,16 @@ async function main() {
       continue;
     }
     out.push(`---\n\n## منبع: ${a.source_name} — ${a.source_title}\n`);
-    out.push(`### قبل (نسخه فعلی سایت)\n\n**تیتر:** ${a.title_fa}\n\n**خلاصه:** ${a.summary_fa}\n\n${voices.length > 1 ? a.body_fa : firstParas(a.body_fa)}\n`);
+    out.push(`### قبل (نسخه فعلی سایت)\n\n**تیتر:** ${a.title_fa}\n\n**خلاصه:** ${a.summary_fa}\n\n${a.body_fa}\n`);
     for (const model of models) for (const voice of voices) {
-      const label = `${model}${voices.length > 1 ? ` — ${voice}` : ""}`;
+      const label = `${model} — ${voice}`;
       const w = await writeArticle({ model, mode: "report", sourceName: a.source_name, title: a.source_title, publishedAt: a.published_at, text, voice });
       if (!w) {
         out.push(`### بعد — ${label}\n\n(نوشته نشد)\n`);
         continue;
       }
       const c = await cleanArticle(w);
-      out.push(`### بعد — ${label}\n\n**تیتر:** ${c.title_fa}\n\n**خلاصه:** ${c.summary_fa}\n\n${voices.length > 1 ? c.body_fa : firstParas(c.body_fa)}\n`);
+      out.push(`### بعد — ${label}\n\n**تیتر:** ${c.title_fa}\n\n**خلاصه:** ${c.summary_fa}\n\n${c.body_fa}\n`);
     }
   }
   const md = out.join("\n");

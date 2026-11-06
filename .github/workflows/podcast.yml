@@ -8,6 +8,10 @@ on:
         description: "Make an episode now, whatever the time (replaces today's)"
         type: boolean
         default: false
+      telegram:
+        description: "Also post it to the Telegram channel"
+        type: boolean
+        default: true
 
 concurrency:
   group: podcast
@@ -30,6 +34,7 @@ jobs:
         run: npx tsx scripts/podcast.ts
         env:
           FORCE: ${{ inputs.force }}
+          PODCAST_TELEGRAM: ${{ inputs.telegram == false && 'false' || 'true' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

@@ -41,8 +41,9 @@ async function main() {
     return;
   }
   const db = adminDb();
-  const { data: existing } = await db.from("podcasts").select("id").eq("episode_date", date).maybeSingle();
-  if (existing && !force) {
+  const { data: existing } = await db.from("podcasts").select("id, telegram_message_id").eq("episode_date", date).maybeSingle();
+  // A daytime test episode (not sent to Telegram) is replaced by the real one at 10pm.
+  if (existing && existing.telegram_message_id && !force) {
     console.log(`Episode for ${date} already exists.`);
     return;
   }

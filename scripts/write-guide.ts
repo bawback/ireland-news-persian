@@ -124,7 +124,7 @@ ${BABAK_VOICE}`;
 async function writeGuide(t: SeoTopic, notes: string, others: { slug: string; title: string }[]) {
   const res = await client.beta.messages.parse({
     model: MODEL,
-    max_tokens: 32000,
+    max_tokens: 24000,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default" as const,
     output_config: { effort: "high", format: betaZodOutputFormat(GuideSchema) },
@@ -135,7 +135,7 @@ async function writeGuide(t: SeoTopic, notes: string, others: { slug: string; ti
         content: `Main search phrase: ${t.keyword}\nRelated searches: ${t.variants.join("، ")}\nWhat to explain: ${t.angle}\nChecked on: ${today()}\n\n<research_notes>\n${notes}\n</research_notes>`,
       },
     ],
-  });
+  }, { timeout: 15 * 60 * 1000 });
   if (res.stop_reason !== "end_turn" || !res.parsed_output) throw new Error(`writer stopped: ${res.stop_reason}`);
   return res.parsed_output;
 }

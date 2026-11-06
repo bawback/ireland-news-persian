@@ -7,10 +7,17 @@ const before =
 const after =
   "سلام، شب‌تون بخیر. Simon Harris، معاون نخست‌وزیر، امروز در Cork گفت که پلیس ایرلند یا Garda و سازمان HSE برنامه تازه‌ای دارند. شرکت Ryanair و Aer Lingus هم پروازهای تازه‌ای از Galway اعلام کردند.";
 
-const tts = ttsProvider();
-if (!tts) throw new Error("No TTS provider configured");
-console.log("TTS:", tts.name);
-mkdirSync("tts-sample", { recursive: true });
-writeFileSync("tts-sample/1-before-persian-letters.mp3", await tts.speak(before));
-writeFileSync("tts-sample/2-after-english-letters.mp3", await tts.speak(after));
-console.log("done");
+async function main() {
+  const tts = ttsProvider();
+  if (!tts) throw new Error("No TTS provider configured");
+  console.log("TTS:", tts.name);
+  mkdirSync("tts-sample", { recursive: true });
+  writeFileSync("tts-sample/1-before-persian-letters.mp3", await tts.speak(before));
+  writeFileSync("tts-sample/2-after-english-letters.mp3", await tts.speak(after));
+  console.log("done");
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

@@ -49,7 +49,10 @@ export async function writePodcastScript(
       messages: [{ role: "user", content: `Date of this episode: ${dateFa}\n\n${input}` }],
     });
     if (res.stop_reason === "refusal" || !res.parsed_output) return null;
-    return res.parsed_output;
+    // Persian comma, never the English one (the voice and readers both prefer it).
+    const fa = (t: string) => t.replace(/\s*,\s*/g, "، ");
+    const o = res.parsed_output;
+    return { ...o, intro: fa(o.intro), outro: fa(o.outro), description: fa(o.description), stories: o.stories.map((x) => ({ headline: fa(x.headline), text: fa(x.text) })) };
   } catch (e) {
     console.warn("podcast script failed:", String(e).slice(0, 300));
     return null;

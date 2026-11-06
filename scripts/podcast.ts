@@ -97,9 +97,9 @@ async function main() {
   const n = files.length;
   const pads = files.map((_, i) => `[${i + 1}:a]aresample=44100,aformat=channel_layouts=stereo,apad=pad_dur=0.7[v${i}]`).join(";");
   const filter =
-    `[0:a]aresample=44100,aformat=channel_layouts=stereo,afade=t=out:st=5.5:d=1.6[m0];` +
+    `[0:a]aresample=44100,aformat=channel_layouts=stereo[m0];` +
     `${pads};` +
-    `[${n + 1}:a]aresample=44100,aformat=channel_layouts=stereo,afade=t=in:d=0.8[m1];` +
+    `[${n + 1}:a]aresample=44100,aformat=channel_layouts=stereo[m1];` +
     `[m0]${files.map((_, i) => `[v${i}]`).join("")}[m1]concat=n=${n + 2}:v=0:a=1,loudnorm=I=-16:TP=-1.5:LRA=11[out]`;
   const out = join(dir, "episode.mp3");
   ffmpeg([...inputs, "-filter_complex", filter, "-map", "[out]", "-ar", "44100", "-b:a", "128k", out]);

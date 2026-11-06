@@ -14,6 +14,8 @@ const firstParas = (body: string, n = 2) =>
 
 async function main() {
   const models = (process.env.COMPARE_MODELS ?? "claude-haiku-5-5,claude-sonnet-5-5").split(",").map((m) => m.trim());
+  // COMPARE_VOICES="default,babak" compares voices; each model × voice is written.
+  const voices = (process.env.COMPARE_VOICES ?? "default").split(",").map((v) => v.trim());
   const count = envInt("COMPARE_COUNT", 4);
   const db = adminDb();
   const { data, error } = await db
@@ -34,15 +36,16 @@ async function main() {
       continue;
     }
     out.push(`---\n\n## منبع: ${a.source_name} — ${a.source_title}\n`);
-    out.push(`### قبل (نسخه فعلی سایت)\n\n**تیتر:** ${a.title_fa}\n\n**خلاصه:** ${a.summary_fa}\n\n${firstParas(a.body_fa)}\n`);
-    for (const model of models) {
-      const w = await writeArticle({ model, mode: "report", sourceName: a.source_name, title: a.source_title, publishedAt: a.published_at, text });
+    out.push(`### قبل (نسخه فعلی سایت)\n\n**تیتر:** ${a.title_fa}\n\n**خلاصه:** ${a.summary_fa}\n\n${voices.length > 1 ? a.body_fa : firstParas(a.body_fa)}\n`);
+    for (const model of models) for (const voice of voices) {
+      const label = `${model}${voices.length > 1 ? ` — ${voice}` : ""}`;
+      const w = await writeArticle({ model, mode: "report", sourceName: a.source_name, title: a.source_title, publishedAt: a.published_at, text, voice });
       if (!w) {
-        out.push(`### بعد — ${model}\n\n(نوشته نشد)\n`);
+        out.push(`### بعد — ${label}\n\n(نوشته نشد)\n`);
         continue;
       }
       const c = await cleanArticle(w);
-      out.push(`### بعد — ${model}\n\n**تیتر:** ${c.title_fa}\n\n**خلاصه:** ${c.summary_fa}\n\n${firstParas(c.body_fa)}\n`);
+      out.push(`### بعد — ${label}\n\n**تیتر:** ${c.title_fa}\n\n**خلاصه:** ${c.summary_fa}\n\n${voices.length > 1 ? c.body_fa : firstParas(c.body_fa)}\n`);
     }
   }
   const md = out.join("\n");

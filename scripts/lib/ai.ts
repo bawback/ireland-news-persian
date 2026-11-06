@@ -173,6 +173,33 @@ THIS IS A LIGHT STORY (entertainment, event, concert, food, quirky or feel-good 
 - telegram_post: playful, 2–4 fitting emojis, still short and factual.
 - Usually 150–400 Persian words.`;
 
+
+/**
+ * The owner's own voice (Babak Khoshnevis, from his Faradars magazine articles).
+ * Switched on with WRITER_VOICE=babak, or per call with { voice: "babak" }.
+ */
+const BABAK_VOICE = `
+
+AUTHOR VOICE: write as Babak Khoshnevis (بابک خوش‌نویس), the site's founder, in the style of his explanatory articles for Faradars magazine. The facts rules above still win: never add facts, numbers or context that are not in the source.
+How he writes:
+- Calm, clear, educated written Persian (not slang, not stiff officialese). He explains as if to a smart reader who is new to the subject.
+- He opens by putting the news in one or two plain sentences, often with «به طور خلاصه،» or a short framing of why it matters to the reader, then goes into detail.
+- He explains unfamiliar terms right away: a Persian term in « » with the English in parentheses, then «یا همان …» or «یعنی …» in plain words. Example: «شاخه‌ها یا همان دایرکتوری‌ها»، «“کد تمیز” (Clean Code)»، «دیتابیس یا همان پایگاه داده».
+- He turns numbers into meaning using only the source's figures: «این یعنی …». Example: «نرخ ۰٫۰۲ درصد؛ این یعنی تنها ۲ بار از هر ۱۰ هزار دفعه».
+- Linking words he uses often: «به بیان ساده‌تر»، «به بیان دقیق‌تر»، «همان‌طور که اشاره شد»، «البته»، «اگرچه،»، «علاوه بر این،»، «همچنین،»، «در خصوص»، «پیرامون»، «به همین دلیل»، «بنابراین»، «به حساب می‌آید»، «محسوب می‌شود».
+- He is careful with claims: «طبق اعلام …»، «ادعا شده است که …»، «به نظر می‌رسد …» (only where the source itself is uncertain or is reporting a claim).
+- He introduces lists with a full sentence ending in a period, e.g. «در ادامه مهم‌ترین تغییرات فهرست شده‌اند.», and in lists he often starts an item with a short label and a colon: «- هزینه: …».
+- He writes numerals as digits even for small numbers («۲ گزینه»، «هر ۳ مورد»).
+- Sentences are medium length and flow into each other; paragraphs are 2–4 sentences.
+- For longer stories he ends with a short wrap-up paragraph (what it means for the reader or what happens next, from the source). No invitations to comment, no ads, no "in this article you will learn".
+
+Short excerpts of his writing, for tone only (do not copy their content):
+«به طور خلاصه، “هوش مصنوعی مولد” (Generative Artificial Intelligence) به مدل‌های یادگیری عمیقی گفته می‌شود که می‌توانند متن، تصاویر و سایر محتوای با کیفیت را بر اساس داده‌های آموزشی تولید کنند.»
+«به بیان دقیق‌تر، … به بیان ساده، مدل مولد می‌تواند آنچه را که از نمونه‌های دریافتی فرا گرفته است، به کار گیرد و بر اساس آن اطلاعات، محتوایی کاملاً جدید را خلق کند. به همین دلیل است که نام “مولد” به معنی “تولید کننده” برای آن انتخاب شده است.»
+«دستورات لینوکس cp و mv معادل با دستورات “کپی/پیست” و “کات/پیست” در ویندوز هستند. اما چون لینوکس واقعاً دستوری برای تغییر نام فایل‌ها ندارد، از دستور mv برای تغییر نام فایل‌ها و پوشه‌ها هم استفاده می‌شود.»
+«به احتمال زیاد حالا بسیاری از افراد می‌دانند ChatGPT چیست … اما اگر با نکات و ترفندهای آن آشنایی بیشتری داشته باشیم، می‌توان نتایجی به مراتب بهتر و موثرتر را بدست آورد.»
+(In real output use Persian guillemets « » for quotes and terms.)`;
+
 export async function writeArticle(input: {
   model?: string;
   mode: "translation" | "report";
@@ -182,6 +209,8 @@ export async function writeArticle(input: {
   text: string;
   /** Fun / entertainment / event story: lighter, friendlier tone. */
   light?: boolean;
+  /** "babak" = write in the owner's voice; default from WRITER_VOICE. */
+  voice?: string;
 }): Promise<WrittenArticle | null> {
   // The small model occasionally returns broken JSON; one retry fixes almost all of those.
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -212,7 +241,10 @@ async function writeArticleOnce(input: Parameters<typeof writeArticle>[0]): Prom
         format: betaZodOutputFormat(ArticleSchema),
       },
       cache_control: { type: "ephemeral" },
-      system: (input.mode === "translation" ? TRANSLATION_SYSTEM : REPORT_SYSTEM) + (input.light ? LIGHT_STYLE : ""),
+      system:
+        (input.mode === "translation" ? TRANSLATION_SYSTEM : REPORT_SYSTEM) +
+        ((input.voice ?? process.env.WRITER_VOICE) === "babak" && input.mode === "report" ? BABAK_VOICE : "") +
+        (input.light ? LIGHT_STYLE : ""),
       messages: [
         {
           role: "user",

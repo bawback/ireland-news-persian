@@ -33,6 +33,49 @@ const ffmpeg = (args: string[]) => execFileSync("ffmpeg", ["-loglevel", "error",
 const duration = (file: string) =>
   Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file]).toString().trim());
 
+function persianDate(date: string) {
+  const dp = Object.fromEntries(
+    new Intl.DateTimeFormat("fa-IR-u-ca-gregory", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      .formatToParts(new Date(`${date}T12:00:00Z`))
+      .map((p) => [p.type, p.value]),
+  );
+  return `${dp.weekday} ${dp.day} ${dp.month} ${dp.year}`;
+}
+
+async function postToTelegram(
+  db: ReturnType<typeof adminDb>,
+  ep: { date: string; dateFa: string; audio: Buffer; seconds: number; title: string; headlines: string[] },
+) {
+  const token = envOptional("TELEGRAM_BOT_TOKEN");
+  const channel = envOptional("TELEGRAM_CHANNEL_ID");
+  if (!token || !channel) {
+    console.log("Telegram is not configured; not posted.");
+    return;
+  }
+  const site = env("SITE_URL");
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const caption =
+    `🎙 <b>${esc(PODCAST_NAME)}</b> | ${esc(ep.dateFa)}\n\n` +
+    ep.headlines.map((h) => `▫️ ${esc(h)}`).join("\n") +
+    `\n\n‏🔗 <a href="${site}/podcast">همه قسمت‌ها در سایت</a>`;
+  const form = new FormData();
+  form.set("chat_id", channel);
+  form.set("audio", new Blob([new Uint8Array(ep.audio)], { type: "audio/mpeg" }), `${ep.date}.mp3`);
+  form.set("caption", caption.slice(0, 1020));
+  form.set("parse_mode", "HTML");
+  form.set("title", `${PODCAST_NAME} | ${ep.dateFa}`.slice(0, 64));
+  form.set("performer", "اخبار ایرلند به فارسی");
+  form.set("duration", String(ep.seconds));
+  form.set("thumbnail", new Blob([readFileSync("assets/podcast/cover-320.jpg")], { type: "image/jpeg" }), "cover.jpg");
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendAudio`, { method: "POST", body: form });
+  const json = (await res.json()) as { ok: boolean; result?: { message_id: number }; description?: string };
+  if (json.ok) {
+    await db.from("podcasts").update({ telegram_message_id: json.result!.message_id }).eq("episode_date", ep.date);
+    await refreshSite();
+    console.log(`✓ posted to Telegram (message ${json.result!.message_id})`);
+  } else console.error("Telegram failed:", json.description);
+}
+
 async function main() {
   const force = envBool("FORCE", false);
   const now = dublinNow();
@@ -40,7 +83,7 @@ async function main() {
   const pastDate = envOptional("PODCAST_DATE")?.trim() || "";
   const date = pastDate || now.date;
   const hour = now.hour;
-  if (!force && !pastDate && !envBool("PODCAST_DELETE", false) && hour !== 22) {
+  if (!force && !pastDate && !envBool("PODCAST_DELETE", false) && !envBool("PODCAST_TELEGRAM_ONLY", false) && hour !== 22) {
     console.log(`It is ${hour}:xx in Dublin, not 22:xx; nothing to do.`);
     return;
   }
@@ -57,6 +100,16 @@ async function main() {
     if (delErr) throw delErr;
     await refreshSite();
     console.log(`✓ deleted the episode for ${date}`);
+    return;
+  }
+  if (envBool("PODCAST_TELEGRAM_ONLY", false)) {
+    // Post an episode that already exists (no new script or voice).
+    const { data: ep } = await db.from("podcasts").select("*").eq("episode_date", date).maybeSingle();
+    if (!ep) throw new Error(`No episode for ${date}.`);
+    const audio = Buffer.from(await (await fetch(ep.audio_url)).arrayBuffer());
+    const blocks = String(ep.script).split(/\n\n+/);
+    const headlines = blocks.slice(1, -1).map((b) => b.split("\n")[0].trim()).filter(Boolean);
+    await postToTelegram(db, { date, dateFa: persianDate(date), audio, seconds: ep.duration_sec, title: ep.title, headlines });
     return;
   }
   const { data: existing } = await db.from("podcasts").select("id, telegram_message_id").eq("episode_date", date).maybeSingle();
@@ -100,12 +153,7 @@ async function main() {
 
   // 2) script
   // Gregorian date in Persian, e.g. «پنجشنبه ۵ نوامبر ۲۰۲۶»
-  const dp = Object.fromEntries(
-    new Intl.DateTimeFormat("fa-IR-u-ca-gregory", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" })
-      .formatToParts(new Date(`${date}T12:00:00Z`))
-      .map((p) => [p.type, p.value]),
-  );
-  const dateFa = `${dp.weekday} ${dp.day} ${dp.month} ${dp.year}`;
+  const dateFa = persianDate(date);
   const script = await writePodcastScript(picked, dateFa);
   if (!script) throw new Error("Could not write the podcast script.");
   console.log(`\n${scriptText(script)}\n`);
@@ -158,30 +206,8 @@ async function main() {
   await refreshSite();
 
   // 6) Telegram
-  const token = envOptional("TELEGRAM_BOT_TOKEN");
-  const channel = envOptional("TELEGRAM_CHANNEL_ID");
-  if (token && channel && envOptional("PODCAST_TELEGRAM") !== "false") {
-    const site = env("SITE_URL");
-    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const caption =
-      `🎙 <b>${esc(PODCAST_NAME)}</b> | ${esc(dateFa)}\n\n` +
-      script.stories.map((s) => `▫️ ${esc(s.headline)}`).join("\n") +
-      `\n\n‏🔗 <a href="${site}/podcast">همه قسمت‌ها در سایت</a>`;
-    const form = new FormData();
-    form.set("chat_id", channel);
-    form.set("audio", new Blob([audio], { type: "audio/mpeg" }), `${date}.mp3`);
-    form.set("caption", caption.slice(0, 1020));
-    form.set("parse_mode", "HTML");
-    form.set("title", `${PODCAST_NAME} | ${script.episode_title}`.slice(0, 64));
-    form.set("performer", "اخبار ایرلند به فارسی");
-    form.set("duration", String(seconds));
-    form.set("thumbnail", new Blob([readFileSync("assets/podcast/cover-320.jpg")], { type: "image/jpeg" }), "cover.jpg");
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendAudio`, { method: "POST", body: form });
-    const json = (await res.json()) as { ok: boolean; result?: { message_id: number }; description?: string };
-    if (json.ok) {
-      await db.from("podcasts").update({ telegram_message_id: json.result!.message_id }).eq("episode_date", date);
-      console.log("✓ posted to Telegram");
-    } else console.error("Telegram failed:", json.description);
+  if (envOptional("PODCAST_TELEGRAM") !== "false") {
+    await postToTelegram(db, { date, dateFa, audio, seconds, title: script.episode_title, headlines: script.stories.map((x) => x.headline) });
   }
   console.log(`✓ ${PODCAST_NAME}: ${script.episode_title}`);
 }

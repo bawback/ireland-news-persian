@@ -34,6 +34,7 @@ jobs:
           MAX_FUN_PER_RUN: ${{ vars.MAX_FUN_PER_RUN || '1' }}
           WRITER_MODEL: ${{ vars.WRITER_MODEL || 'claude-haiku-5-5' }}
           WRITER_MODEL_IMPORTANT: ${{ vars.WRITER_MODEL_IMPORTANT || 'claude-haiku-5-5' }}
+          WRITER_VOICE: ${{ vars.WRITER_VOICE || 'babak' }}
       - name: Add AI pictures to new articles
         run: npx tsx scripts/add-images.ts
         env:

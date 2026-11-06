@@ -122,12 +122,13 @@ ${BABAK_VOICE}`;
 }
 
 async function writeGuide(t: SeoTopic, notes: string, others: { slug: string; title: string }[]) {
-  const res = await client.beta.messages.parse({
+  // Long Persian output: stream it (required for long requests) and validate the JSON ourselves.
+  const stream = client.beta.messages.stream({
     model: MODEL,
-    max_tokens: 24000,
+    max_tokens: 64000,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default" as const,
-    output_config: { effort: "high", format: betaZodOutputFormat(GuideSchema) },
+    output_config: { effort: "medium", format: betaZodOutputFormat(GuideSchema) },
     system: writerSystem(others),
     messages: [
       {
@@ -135,9 +136,11 @@ async function writeGuide(t: SeoTopic, notes: string, others: { slug: string; ti
         content: `Main search phrase: ${t.keyword}\nRelated searches: ${t.variants.join("، ")}\nWhat to explain: ${t.angle}\nChecked on: ${today()}\n\n<research_notes>\n${notes}\n</research_notes>`,
       },
     ],
-  }, { timeout: 15 * 60 * 1000 });
-  if (res.stop_reason !== "end_turn" || !res.parsed_output) throw new Error(`writer stopped: ${res.stop_reason}`);
-  return res.parsed_output;
+  });
+  const msg = await stream.finalMessage();
+  if (msg.stop_reason !== "end_turn") throw new Error(`writer stopped: ${msg.stop_reason}`);
+  const text = msg.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
+  return GuideSchema.parse(JSON.parse(text));
 }
 
 // ------------------------------------------------------------------ main

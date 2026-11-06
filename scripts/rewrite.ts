@@ -3,6 +3,7 @@
  * (WRITER_VOICE, WRITER_MODEL). Keeps slug, picture, category and Telegram post history.
  * DRY run by default; APPLY=true saves. REWRITE_DATE=YYYY-MM-DD (default: yesterday in Dublin).
  */
+import { writeFileSync } from "node:fs";
 import { adminDb } from "./lib/db";
 import { envBool } from "./lib/env";
 import { extractArticleText } from "./lib/extract";
@@ -28,6 +29,8 @@ async function main() {
   const rows = (data ?? []).filter((r) => dublinDate(new Date(r.published_at)) === date);
   console.log(`${rows.length} articles published on ${date} (Dublin). Voice: ${process.env.WRITER_VOICE ?? "default"}, model: ${WRITER_MODEL}. ${apply ? "APPLY" : "dry run"}`);
 
+  // Backup of the old text, kept as a workflow artifact.
+  writeFileSync("rewrite-backup.json", JSON.stringify(rows, null, 2));
   let done = 0;
   for (const r of rows) {
     const text = await extractArticleText(r.source_url);

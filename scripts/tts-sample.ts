@@ -20,7 +20,7 @@ async function main() {
     const path = `podcasts/samples/${name}-${Date.now()}.mp3`;
     const { error } = await db.storage.from("news-images").upload(path, audio, { contentType: "audio/mpeg", upsert: true });
     if (error) throw error;
-    console.log("SAMPLE", name, db.storage.from("news-images").getPublicUrl(path).data.publicUrl);
+    console.log("SAMPLE", name, db.storage.from("news-images").getPublicUrl(path).data.publicUrl.replace(/^https:\/\//, ""));
   }
   console.log("done");
 }

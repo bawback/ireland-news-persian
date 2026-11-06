@@ -51,6 +51,11 @@ async function Episodes() {
             <BidiText text={e.description} />
           </p>
           <audio controls preload={i === 0 ? "metadata" : "none"} src={e.audio_url} className="mt-3 w-full" />
+          {e.telegram_message_id && (
+            <a href={`${SITE.telegram}/${e.telegram_message_id}`} target="_blank" rel="noopener" className="mt-2 inline-block text-sm text-brand hover:underline">
+              این قسمت را در تلگرام بشنوید
+            </a>
+          )}
           <details className="mt-2 text-sm">
             <summary className="cursor-pointer text-brand">متن کامل این قسمت</summary>
             <div className="mt-2 space-y-3 leading-8 whitespace-pre-line">{e.script}</div>

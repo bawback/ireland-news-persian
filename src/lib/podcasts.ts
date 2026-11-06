@@ -16,6 +16,7 @@ export interface Episode {
   duration_sec: number;
   size_bytes: number;
   created_at: string;
+  telegram_message_id?: number | null;
 }
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

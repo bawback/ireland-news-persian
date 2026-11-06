@@ -40,11 +40,25 @@ async function main() {
   const pastDate = envOptional("PODCAST_DATE")?.trim() || "";
   const date = pastDate || now.date;
   const hour = now.hour;
-  if (!force && !pastDate && hour !== 22) {
+  if (!force && !pastDate && !envBool("PODCAST_DELETE", false) && hour !== 22) {
     console.log(`It is ${hour}:xx in Dublin, not 22:xx; nothing to do.`);
     return;
   }
   const db = adminDb();
+  if (envBool("PODCAST_DELETE", false)) {
+    const { data: ep } = await db.from("podcasts").select("id, audio_url").eq("episode_date", date).maybeSingle();
+    if (!ep) {
+      console.log(`No episode for ${date}.`);
+      return;
+    }
+    const path = decodeURIComponent(String(ep.audio_url).split(`/${BUCKET}/`)[1] ?? "");
+    if (path) await db.storage.from(BUCKET).remove([path]);
+    const { error: delErr } = await db.from("podcasts").delete().eq("id", ep.id);
+    if (delErr) throw delErr;
+    await refreshSite();
+    console.log(`✓ deleted the episode for ${date}`);
+    return;
+  }
   const { data: existing } = await db.from("podcasts").select("id, telegram_message_id").eq("episode_date", date).maybeSingle();
   // A daytime test episode (not sent to Telegram) is replaced by the real one at 10pm.
   if (existing && existing.telegram_message_id && !force) {
@@ -58,8 +72,9 @@ async function main() {
   }
 
   // 1) today's stories (last 24 hours), most important first
+  // Stories published on the episode's day in Dublin (for tonight: from midnight until now).
   const dayStart = new Date(`${date}T00:00:00Z`).getTime();
-  const since = pastDate ? new Date(dayStart - 3 * 3600_000).toISOString() : new Date(Date.now() - 24 * 3600_000).toISOString();
+  const since = new Date(dayStart - 3 * 3600_000).toISOString();
   const until = pastDate ? new Date(dayStart + 27 * 3600_000).toISOString() : new Date().toISOString();
   const { data: fetched, error } = await db
     .from("articles")
@@ -69,7 +84,7 @@ async function main() {
     .lte("published_at", until);
   if (error) throw error;
   const dayOf = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(iso));
-  const rows = pastDate ? (fetched ?? []).filter((a) => dayOf(a.published_at) === date) : fetched;
+  const rows = (fetched ?? []).filter((a) => dayOf(a.published_at) === date);
   const max = envInt("PODCAST_STORIES", 5);
   const serious = (rows ?? [])
     .filter((a) => a.category !== "entertainment")

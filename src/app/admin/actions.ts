@@ -184,3 +184,34 @@ export async function mergeArticles(form: FormData) {
   refreshSite();
   redirect(`/admin/edit?id=${mainId}&merged=${others.length}`);
 }
+
+// ---------------------------------------------------------------- podcast episodes
+
+export async function savePodcast(form: FormData) {
+  await requireAdmin();
+  const id = text(form, "id");
+  const update = {
+    title: text(form, "title"),
+    description: text(form, "description"),
+    script: String(form.get("script") ?? "").replace(/\r\n/g, "\n").trim(),
+  };
+  if (!update.title) redirect(`/admin/podcasts/edit?id=${id}&error=empty`);
+  const { error } = await adminDb().from("podcasts").update(update).eq("id", id);
+  if (error) redirect(`/admin/podcasts/edit?id=${id}&error=save`);
+  refreshSite();
+  redirect(`/admin/podcasts/edit?id=${id}&saved=1`);
+}
+
+export async function deletePodcast(form: FormData) {
+  await requireAdmin();
+  const id = text(form, "id");
+  const db = adminDb();
+  const { data: ep } = await db.from("podcasts").select("audio_url").eq("id", id).maybeSingle();
+  // Remove the MP3 from storage too (path after "/news-images/").
+  const path = ep?.audio_url ? decodeURIComponent(String(ep.audio_url).split(`/${IMAGE_BUCKET}/`)[1] ?? "") : "";
+  if (path) await db.storage.from(IMAGE_BUCKET).remove([path]);
+  const { error } = await db.from("podcasts").delete().eq("id", id);
+  if (error) redirect(`/admin/podcasts/edit?id=${id}&error=delete`);
+  refreshSite();
+  redirect("/admin/podcasts?deleted=1");
+}

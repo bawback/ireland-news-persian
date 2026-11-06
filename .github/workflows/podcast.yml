@@ -11,6 +11,10 @@ on:
       date:
         description: "Make the episode of an earlier day, YYYY-MM-DD (empty = today)"
         default: ""
+      delete:
+        description: "Delete the episode of that date instead of making one"
+        type: boolean
+        default: false
       telegram:
         description: "Also post it to the Telegram channel"
         type: boolean
@@ -38,6 +42,7 @@ jobs:
         env:
           FORCE: ${{ inputs.force }}
           PODCAST_DATE: ${{ github.event.inputs.date || '' }}
+          PODCAST_DELETE: ${{ github.event.inputs.delete || 'false' }}
           PODCAST_TELEGRAM: ${{ github.event.inputs.telegram || 'true' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

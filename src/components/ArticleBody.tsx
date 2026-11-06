@@ -3,7 +3,7 @@ import { BidiText } from "./BidiText";
 /**
  * Renders the simple text format used by articles and guides:
  * blank line = new paragraph, "## " / "### " = subheadings, "> " = highlighted note,
- * "- " = bullet list, "1. " = numbered list. Inside text: **bold** and [link](https://…).
+ * "- " = bullet list, "1. " = numbered list. Inside text: **bold**, [link](https://…) and [internal link](/guides/…).
  */
 type Block =
   | { kind: "p"; text: string }
@@ -42,7 +42,7 @@ function parse(body: string): Block[] {
 
 /** **bold** and [text](https://url) inside a line; everything else goes through BidiText. */
 function Inline({ text }: { text: string }) {
-  const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\(https?:\/\/[^)\s]+\))/g).filter(Boolean);
+  const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\((?:https?:\/\/|\/)[^)\s]*\))/g).filter(Boolean);
   return (
     <>
       {parts.map((part, i) => {
@@ -51,6 +51,14 @@ function Inline({ text }: { text: string }) {
             <strong key={i}>
               <BidiText text={part.slice(2, -2)} />
             </strong>
+          );
+        }
+        const internal = part.match(/^\[([^\]]+)\]\((\/[a-z0-9\-/#]*)\)$/);
+        if (internal) {
+          return (
+            <a key={i} href={internal[2]} className="text-brand underline underline-offset-4">
+              <BidiText text={internal[1]} />
+            </a>
           );
         }
         const link = part.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);

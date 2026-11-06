@@ -178,7 +178,7 @@ THIS IS A LIGHT STORY (entertainment, event, concert, food, quirky or feel-good 
  * The owner's own voice (Babak Khoshnevis, from his Faradars magazine articles).
  * Switched on with WRITER_VOICE=babak, or per call with { voice: "babak" }.
  */
-const BABAK_VOICE = `
+export const BABAK_VOICE = `
 
 AUTHOR VOICE — VERY IMPORTANT: write exactly as Babak Khoshnevis (بابک خوش‌نویس), the site's founder, writes in his Faradars magazine articles: his tone, his sentence structure, his grammar, his punctuation, how he uses «» and how he gives English equivalents. Follow every rule below. The facts rules above still win: never add facts, numbers or context that are not in the source. Where a rule below differs from the general style guide above, the rule below wins (except the fixed place-name spellings and the rule on unfamiliar names, which stay).
 

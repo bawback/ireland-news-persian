@@ -1,0 +1,53 @@
+name: Daily SEO guide
+
+on:
+  schedule:
+    - cron: "15 9 * * *" # every day around 9–10am Irish time
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Topic id from scripts/seo-topics.ts (empty = next one)"
+        default: ""
+      telegram:
+        description: "Announce the new guide in the Telegram channel"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-guide
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Research and write the guide
+        run: npx tsx scripts/write-guide.ts
+        env:
+          GUIDE_TOPIC: ${{ github.event.inputs.topic || '' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Publish (commit → site redeploys)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/content/guides/auto.json
+          git diff --cached --quiet && exit 0
+          git commit -m "New guide: $(head -1 guide-result.txt)"
+          for i in 1 2 3 4; do git pull --rebase origin main && git push origin HEAD:main && break; sleep $((i*5)); done
+      - name: Announce in Telegram
+        if: ${{ github.event.inputs.telegram != 'false' && hashFiles('guide-result.txt') != '' }}
+        run: npx tsx scripts/announce-guide.ts
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID || secrets.TELEGRAM_CHANNEL_ID }}

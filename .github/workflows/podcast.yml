@@ -23,6 +23,10 @@ on:
         description: "Also post it to the Telegram channel"
         type: boolean
         default: true
+      sample:
+        description: "Only make short voice samples (to check pronunciation)"
+        type: boolean
+        default: false
 
 concurrency:
   group: podcast
@@ -41,7 +45,20 @@ jobs:
       - run: npm ci
       - name: Install ffmpeg
         run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+      - name: Voice samples
+        if: ${{ github.event.inputs.sample == 'true' }}
+        run: npx tsx scripts/tts-sample.ts
+        env:
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ vars.AZURE_SPEECH_REGION }}
+          AZURE_VOICE: ${{ vars.AZURE_VOICE || 'fa-IR-FaridNeural' }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ github.event.inputs.sample == 'true' }}
+        with:
+          name: tts-sample
+          path: tts-sample/
       - name: Make and publish the podcast
+        if: ${{ github.event.inputs.sample != 'true' }}
         run: npx tsx scripts/podcast.ts
         env:
           FORCE: ${{ inputs.force }}

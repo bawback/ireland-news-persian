@@ -28,7 +28,8 @@ CONTENT
 - description: 1–2 sentences for the podcast page listing the main topics.
 
 WRITTEN FOR THE EAR (very important for the voice)
-- Everything in Persian letters only. No English or Latin letters at all, no abbreviations, no parentheses, no hashtags, no emojis, no markdown. Write names the way they are pronounced, in Persian letters (e.g. «سایمون هریس»), and prefer a role instead of an unfamiliar name («وزیر دادگستری ایرلند»). Say «پلیس ایرلند» for Garda, «سازمان بهداشت ایرلند» for HSE, etc.
+- Persian text in Persian letters, BUT every non-Persian name or term must be written in its original Latin (English/Irish) spelling, never transliterated into Persian letters, so a second English voice can pronounce it correctly: people («Simon Harris», «Micheál Martin» → write «Micheal Martin»), towns and places other than the well-known ones below («Cork», «Galway», «Limerick», «Temple Bar»), organisations and brands («Garda», «HSE», «RTÉ» → «RTE», «Ryanair», «Aer Lingus», «Dáil» → «Dail»), and English terms («Critical Skills», «Stamp 4»). Write Irish words without accents. Keep the Persian word right next to it when it helps understanding, e.g. «پلیس ایرلند یا Garda». Names that have a common Persian form stay in Persian: ایرلند، دوبلین، بریتانیا، لندن، اروپا، آمریکا، اتحادیه اروپا، یورو.
+- No other Latin letters, no parentheses, no hashtags, no emojis, no markdown.
 - Write numbers, money, percentages and dates as words: «سیصد یورو»، «چهار درصد»، «پنجم نوامبر».
 - Short sentences (8–18 words), simple spoken Persian, correct ZWNJ. Use commas to mark natural pauses.`;
 

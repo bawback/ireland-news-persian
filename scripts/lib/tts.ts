@@ -6,7 +6,10 @@
  */
 import { envOptional } from "./env";
 
-export type TtsProvider = { name: string; speak: (text: string) => Promise<Buffer> };
+export type TtsProvider = {
+  name: string;
+  speak: (text: string) => Promise<Buffer>;
+};
 
 function elevenlabs(key: string, voiceId: string): TtsProvider {
   const model = envOptional("ELEVENLABS_MODEL") ?? "eleven_v3";
@@ -62,28 +65,68 @@ async function findAzureRegion(key: string, preferred: string): Promise<string> 
   );
 }
 
+// Non-Persian words (names, places, English terms) are written in Latin letters in the script.
+// The Persian voice can't pronounce them, so each Latin run is read by an Irish-English voice
+// of the same gender, inside the same SSML request.
+const LATIN_RUN = /[A-Za-z][A-Za-z0-9'’.&\-]*(?:[ \t]+[A-Za-z0-9][A-Za-z0-9'’.&\-]*)*/g;
+const FEMALE_FA = /Dilara/i;
+
+export function toSsml(text: string, voice: string, foreignVoice: string): string {
+  const fa = (t: string) => (t.trim() ? `<voice name="${voice}"><prosody rate="-4%">${xmlEsc(t)}</prosody></voice>` : "");
+  let out = "";
+  let last = 0;
+  for (const m of text.matchAll(LATIN_RUN)) {
+    const word = m[0].replace(/[.\-]+$/, "");
+    out += fa(text.slice(last, m.index));
+    out += `<voice name="${foreignVoice}"><prosody rate="-4%">${xmlEsc(word)}</prosody></voice>`;
+    last = m.index! + word.length;
+  }
+  out += fa(text.slice(last));
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="fa-IR">${out}</speak>`;
+}
+
 function azure(key: string, preferredRegion: string): TtsProvider {
   const voice = envOptional("AZURE_VOICE") ?? "fa-IR-FaridNeural";
+  const foreignVoice =
+    envOptional("AZURE_FOREIGN_VOICE") ?? (FEMALE_FA.test(voice) ? "en-IE-EmilyNeural" : "en-IE-ConnorNeural");
   let regionP: Promise<string> | null = null;
+
+  async function speakOne(text: string, region: string): Promise<Buffer> {
+    const res = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+      method: "POST",
+      headers: {
+        "Ocp-Apim-Subscription-Key": key,
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3",
+        "User-Agent": "ireland-news-persian",
+      },
+      body: toSsml(text, voice, foreignVoice),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!res.ok) throw new Error(`Azure TTS ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+
   return {
-    name: `Azure (${voice})`,
+    name: `Azure (${voice} + ${foreignVoice})`,
     async speak(text) {
       regionP ??= findAzureRegion(key, preferredRegion);
       const region = await regionP;
-      const ssml = `<speak version="1.0" xml:lang="fa-IR"><voice name="${voice}"><prosody rate="-4%">${xmlEsc(text)}</prosody></voice></speak>`;
-      const res = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
-        method: "POST",
-        headers: {
-          "Ocp-Apim-Subscription-Key": key,
-          "Content-Type": "application/ssml+xml",
-          "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3",
-          "User-Agent": "ireland-news-persian",
-        },
-        body: ssml,
-        signal: AbortSignal.timeout(120_000),
-      });
-      if (!res.ok) throw new Error(`Azure TTS ${res.status}: ${(await res.text()).slice(0, 300)}`);
-      return Buffer.from(await res.arrayBuffer());
+      // Azure allows at most 50 <voice> elements per request, so a text with many
+      // English words is sent in groups of sentences and the MP3s are joined.
+      const runs = (t: string) => (t.match(LATIN_RUN) ?? []).length;
+      const parts: string[] = [];
+      let cur = "";
+      for (const sentence of text.split(/(?<=[.!?؟])\s+/)) {
+        if (cur && runs(`${cur} ${sentence}`) > 22) {
+          parts.push(cur);
+          cur = sentence;
+        } else cur = cur ? `${cur} ${sentence}` : sentence;
+      }
+      if (cur) parts.push(cur);
+      const out: Buffer[] = [];
+      for (const part of parts) out.push(await speakOne(part, region));
+      return Buffer.concat(out);
     },
   };
 }

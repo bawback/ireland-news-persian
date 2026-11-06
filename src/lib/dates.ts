@@ -47,3 +47,17 @@ export function relativeFa(iso: string, now: Date = new Date()): string {
   if (abs < 86400 * 7) return rtf.format(Math.round(diffSec / 86400), "day");
   return formatFaDate(iso);
 }
+
+const dayFmt = new Intl.DateTimeFormat("fa-IR-u-ca-gregory", {
+  timeZone: TZ,
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+/** A calendar day (YYYY-MM-DD) as "پنجشنبه ۵ نوامبر ۲۰۲۶". */
+export function formatDayFa(day: string): string {
+  const parts = Object.fromEntries(dayFmt.formatToParts(new Date(`${day}T12:00:00Z`)).map((p) => [p.type, p.value]));
+  return `${parts.weekday} ${parts.day} ${parts.month} ${parts.year}`;
+}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getEpisodes, minutes, PODCAST } from "@/lib/podcasts";
-import { formatFaDate } from "@/lib/dates";
+import { formatDayFa } from "@/lib/dates";
 import { SITE } from "@/lib/site";
 import { BidiText } from "@/components/BidiText";
 
@@ -41,12 +41,12 @@ async function Episodes() {
     <ul className="space-y-4">
       {episodes.map((e, i) => (
         <li key={e.id} className="rounded-2xl border border-line bg-surface p-5">
-          <p className="text-sm text-muted">
-            {formatFaDate(`${e.episode_date}T12:00:00Z`)} · {minutes(e.duration_sec)}
-          </p>
-          <h2 className="mt-1 text-lg leading-8 font-black">
-            <BidiText text={e.title} />
+          <h2 className="text-lg leading-8 font-black">
+            {PODCAST.name} | {formatDayFa(e.episode_date)}
           </h2>
+          <p className="mt-1 leading-8 font-semibold">
+            <BidiText text={e.title} /> <span className="text-sm font-normal text-muted">· {minutes(e.duration_sec)}</span>
+          </p>
           <p className="mt-1 leading-8 text-muted">
             <BidiText text={e.description} />
           </p>

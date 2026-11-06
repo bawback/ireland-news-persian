@@ -1,3 +1,4 @@
+import { formatDayFa } from "@/lib/dates";
 import { getEpisodes, PODCAST } from "@/lib/podcasts";
 import { SITE } from "@/lib/site";
 
@@ -26,7 +27,7 @@ export async function GET() {
 ${episodes
   .map(
     (e) => `<item>
-<title>${esc(e.title)}</title>
+<title>${esc(`${formatDayFa(e.episode_date)} | ${e.title}`)}</title>
 <description>${esc(e.description)}</description>
 <link>${SITE.url}/podcast</link>
 <guid isPermaLink="false">${e.id}</guid>

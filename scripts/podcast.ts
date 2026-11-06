@@ -35,8 +35,12 @@ const duration = (file: string) =>
 
 async function main() {
   const force = envBool("FORCE", false);
-  const { date, hour } = dublinNow();
-  if (!force && hour !== 22) {
+  const now = dublinNow();
+  // PODCAST_DATE=YYYY-MM-DD makes (or remakes) the episode of an earlier day from that day's stories.
+  const pastDate = envOptional("PODCAST_DATE")?.trim() || "";
+  const date = pastDate || now.date;
+  const hour = now.hour;
+  if (!force && !pastDate && hour !== 22) {
     console.log(`It is ${hour}:xx in Dublin, not 22:xx; nothing to do.`);
     return;
   }
@@ -54,13 +58,18 @@ async function main() {
   }
 
   // 1) today's stories (last 24 hours), most important first
-  const since = new Date(Date.now() - 24 * 3600_000).toISOString();
-  const { data: rows, error } = await db
+  const dayStart = new Date(`${date}T00:00:00Z`).getTime();
+  const since = pastDate ? new Date(dayStart - 3 * 3600_000).toISOString() : new Date(Date.now() - 24 * 3600_000).toISOString();
+  const until = pastDate ? new Date(dayStart + 27 * 3600_000).toISOString() : new Date().toISOString();
+  const { data: fetched, error } = await db
     .from("articles")
     .select("slug, title_fa, summary_fa, body_fa, category, importance, immigrant_relevance, published_at")
     .eq("status", "published")
-    .gte("published_at", since);
+    .gte("published_at", since)
+    .lte("published_at", until);
   if (error) throw error;
+  const dayOf = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(iso));
+  const rows = pastDate ? (fetched ?? []).filter((a) => dayOf(a.published_at) === date) : fetched;
   const max = envInt("PODCAST_STORIES", 5);
   const serious = (rows ?? [])
     .filter((a) => a.category !== "entertainment")
@@ -75,7 +84,13 @@ async function main() {
   console.log(`Stories:\n${picked.map((a) => ` - ${a.title_fa}`).join("\n")}`);
 
   // 2) script
-  const dateFa = new Intl.DateTimeFormat("fa-IR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(new Date());
+  // Gregorian date in Persian, e.g. «پنجشنبه ۵ نوامبر ۲۰۲۶»
+  const dp = Object.fromEntries(
+    new Intl.DateTimeFormat("fa-IR-u-ca-gregory", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      .formatToParts(new Date(`${date}T12:00:00Z`))
+      .map((p) => [p.type, p.value]),
+  );
+  const dateFa = `${dp.weekday} ${dp.day} ${dp.month} ${dp.year}`;
   const script = await writePodcastScript(picked, dateFa);
   if (!script) throw new Error("Could not write the podcast script.");
   console.log(`\n${scriptText(script)}\n`);

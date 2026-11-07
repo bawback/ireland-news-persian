@@ -16,6 +16,7 @@ import { checkNovelty, classifyItems, cleanArticle, writeArticle, WRITER_MODEL, 
 import { adminDb } from "./lib/db";
 import { envBool, envInt } from "./lib/env";
 import { refreshSite } from "./lib/revalidate";
+import { addCoverage } from "./lib/coverage";
 
 const MAX_AGE_HOURS = envInt("MAX_AGE_HOURS", 36);
 const MAX_ARTICLES_PER_RUN = envInt("MAX_ARTICLES_PER_RUN", 3);
@@ -81,18 +82,20 @@ async function classifyAll(items: FeedItem[]): Promise<Map<string, Classificatio
 // How far back we look for "already covered" stories.
 const DEDUP_HOURS = envInt("DEDUP_HOURS", 96);
 
-async function recentStoryKeys(): Promise<Set<string>> {
+/** story_key → the article written for it, for stories covered recently. */
+async function recentStoryKeys(): Promise<Map<string, string>> {
   const since = new Date(Date.now() - DEDUP_HOURS * 3600_000).toISOString();
-  const { data } = await db.from("raw_items").select("story_key").eq("status", "done").gte("created_at", since);
-  return new Set((data ?? []).map((r) => r.story_key).filter(Boolean));
+  const { data } = await db.from("raw_items").select("story_key, article_id").eq("status", "done").gte("created_at", since);
+  return new Map((data ?? []).filter((r) => r.story_key && r.article_id).map((r) => [r.story_key, r.article_id]));
 }
 
-type Covered = { source_title: string; title_fa: string; summary_fa: string };
+type Covered = { id: string; source_title: string; title_fa: string; summary_fa: string };
 async function recentArticles(): Promise<Covered[]> {
   const since = new Date(Date.now() - DEDUP_HOURS * 3600_000).toISOString();
   const { data } = await db
     .from("articles")
-    .select("source_title, title_fa, summary_fa")
+    .select("id, source_title, title_fa, summary_fa")
+    .eq("status", "published")
     .gte("created_at", since)
     .order("created_at", { ascending: false })
     .limit(150);
@@ -149,6 +152,7 @@ async function main() {
 
   // Pick the best item for each story.
   const bestByStory = new Map<string, { it: FeedItem; c: Classification; s: Source }>();
+  const sameKeyCount = new Map<string, number>(); // reports of each story in this run
   for (const it of fresh) {
     const c = classes.get(it.url);
     if (!c) continue; // not classified this time; stays "new" and is retried next run
@@ -159,8 +163,15 @@ async function main() {
       .update({ status, category: c.category, importance: c.importance, immigrant_relevance: c.immigrant_relevance, sensitive: c.sensitive, story_key: c.story_key })
       .eq("url", it.url);
     if (status !== "candidate") continue;
-    if (seenKeys.has(c.story_key)) continue; // already covered in the last 48h
+    const coveredBy = seenKeys.get(c.story_key);
+    if (coveredBy) {
+      // Already covered recently: count it as one more report of that story.
+      await db.from("raw_items").update({ status: "duplicate" }).eq("url", it.url);
+      await addCoverage(db, coveredBy, s.nameEn);
+      continue;
+    }
     const prev = bestByStory.get(c.story_key);
+    sameKeyCount.set(c.story_key, (sameKeyCount.get(c.story_key) ?? 0) + 1);
     if (!prev || s.priority > prev.s.priority) bestByStory.set(c.story_key, { it, c, s });
   }
 
@@ -175,6 +186,14 @@ async function main() {
   const pool: Cand[] = [];
   const quickNew = (title: string) =>
     !covered.some((t) => sameStory(t, title)) && !pool.some((x) => sameStory(x.it.title, title));
+  // Headline clearly matches an article we published: count it as one more report.
+  for (const cand of all_) {
+    const match = coveredArticles.find((a) => a.source_title && sameStory(a.source_title, cand.it.title));
+    if (match) {
+      await db.from("raw_items").update({ status: "duplicate" }).eq("url", cand.it.url);
+      await addCoverage(db, match.id, cand.s.nameEn);
+    }
+  }
   const newsRanked = all_.filter((x) => x.c.category !== "entertainment").sort((a, b) => score(b.c, b.s) - score(a.c, a.s));
   const funScore = (x: { c: Classification; s: Source }) => x.c.fun_appeal * 3 + x.c.importance + x.s.priority / 5;
   const funRanked = all_.filter((x) => isFun(x.c)).sort((a, b) => funScore(b) - funScore(a));
@@ -198,6 +217,8 @@ async function main() {
     if (v && (v.verdict === "duplicate" || (v.verdict === "update" && fun))) {
       console.log(`  ⨯ duplicate: ${cand.it.title}${v.same_as >= 0 ? `  (= ${coveredArticles[v.same_as]?.source_title})` : ""}`);
       await db.from("raw_items").update({ status: "duplicate" }).eq("url", cand.it.url);
+      const old = coveredArticles[v.same_as];
+      if (old) await addCoverage(db, old.id, cand.s.nameEn);
       continue;
     }
     if (fun ? f >= MAX_FUN_PER_RUN : n >= MAX_ARTICLES_PER_RUN) continue;
@@ -205,6 +226,7 @@ async function main() {
       const old = coveredArticles[v.same_as];
       if (!old || !v.new_facts.trim()) continue;
       cand.updateOf = { title_fa: old.title_fa, new_facts: v.new_facts };
+      await addCoverage(db, old.id, cand.s.nameEn);
       console.log(`  ↻ update: ${cand.it.title} — ${v.new_facts}`);
     }
     chosen.push(cand);
@@ -269,6 +291,8 @@ async function main() {
       continue;
     }
     await db.from("raw_items").update({ status: "done", article_id: inserted.id }).eq("url", it.url);
+    const others = (sameKeyCount.get(c.story_key) ?? 1) - 1;
+    if (others > 0) await addCoverage(db, inserted.id, "", others);
     written++;
     console.log(`  ✓ ${status}: ${article.title_fa}`);
   }

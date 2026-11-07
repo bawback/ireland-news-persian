@@ -22,7 +22,14 @@ export interface Article {
   image_credit?: string | null;
   /** Persian alt text for the picture (SEO and screen readers). */
   image_alt?: string | null;
+  /** Social posts, plus how many reports of this story we saw (the «خبر داغ» badge). */
+  social?: { coverage?: { count: number; sources: string[] } } | null;
   status: ArticleStatus;
   published_at: string;
   created_at: string;
 }
+
+/** At this many reports from the news feeds, a story is shown as «خبر داغ». */
+export const HOT_AT = 3;
+export const coverageOf = (a: Pick<Article, "social">) => a.social?.coverage?.count ?? 1;
+export const isHot = (a: Pick<Article, "social">) => coverageOf(a) >= HOT_AT;

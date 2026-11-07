@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Article } from "@/lib/types";
+import { isHot, type Article } from "@/lib/types";
 import { categoryName } from "@/lib/categories";
 import { relativeFa } from "@/lib/dates";
 import { BidiText } from "./BidiText";
@@ -24,6 +24,7 @@ function Meta({ a }: { a: Article }) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
       <span className="rounded-full bg-brand-soft px-2 py-0.5 font-semibold text-brand">{categoryName(a.category)}</span>
+      {isHot(a) && <span className="rounded-full bg-hot-soft px-2 py-0.5 font-semibold text-hot">🔥 خبر داغ</span>}
       {a.immigrant_relevance >= 2 && (
         <span className="rounded-full bg-accent-soft px-2 py-0.5 font-semibold text-accent">مهم برای مهاجران</span>
       )}

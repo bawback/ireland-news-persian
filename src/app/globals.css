@@ -10,6 +10,8 @@
   --brand-soft: #e3f3ea;
   --accent: #e0702a;
   --accent-soft: #fdeee3;
+  --hot: #c62828;
+  --hot-soft: #fde8e8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +25,8 @@
     --brand-soft: #12291f;
     --accent: #f39a5b;
     --accent-soft: #2d1d12;
+    --hot: #ff8a80;
+    --hot-soft: #3a1515;
   }
 }
 
@@ -36,6 +40,8 @@
   --color-brand-soft: var(--brand-soft);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-hot: var(--hot);
+  --color-hot-soft: var(--hot-soft);
   --font-sans: "Vazirmatn Variable", Tahoma, sans-serif;
 }
 

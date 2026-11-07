@@ -10,6 +10,10 @@ on:
         description: "Unpublish the repeats (can be undone in admin)"
         type: boolean
         default: false
+      backfill:
+        description: "Count how often each recent story was reported («خبر داغ»)"
+        type: boolean
+        default: false
 
 jobs:
   run:
@@ -26,12 +30,14 @@ jobs:
         env:
           DEDUP_DAYS: ${{ inputs.days }}
           DEDUP_APPLY: ${{ inputs.apply }}
+          DEDUP_BACKFILL: ${{ inputs.backfill }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SITE_URL: ${{ vars.SITE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
       - uses: actions/upload-artifact@v4
+        if: ${{ inputs.backfill != true }}
         with:
           name: dedup-report
           path: dedup-report.md

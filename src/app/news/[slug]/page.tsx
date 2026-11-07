@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { getBySlug, getLatest, getRelated } from "@/lib/articles";
 import { categoryName } from "@/lib/categories";
 import { formatFaDateTime } from "@/lib/dates";
+import { coverageOf, isHot } from "@/lib/types";
 import { SITE } from "@/lib/site";
 import { ArticleBody } from "@/components/ArticleBody";
 import { BidiText } from "@/components/BidiText";
@@ -131,6 +132,13 @@ async function ArticleView({ slug }: { slug: string }) {
           <time dateTime={a.published_at}>{formatFaDateTime(a.published_at)} (به وقت دوبلین)</time>
           {a.immigrant_relevance >= 2 && (
             <span className="rounded-full bg-accent-soft px-2.5 py-0.5 font-semibold text-accent">مهم برای مهاجران</span>
+          )}
+          {isHot(a) && (
+            <span className="rounded-full bg-hot-soft px-2.5 py-0.5 font-semibold text-hot">
+              🔥 خبر داغ: {coverageOf(a).toLocaleString("fa-IR")} گزارش
+              {(a.social?.coverage?.sources.length ?? 0) > 1 &&
+                ` از ${a.social!.coverage!.sources.length.toLocaleString("fa-IR")} رسانه`}
+            </span>
           )}
         </div>
 

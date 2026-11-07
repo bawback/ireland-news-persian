@@ -2,7 +2,7 @@ name: Daily SEO guide
 
 on:
   schedule:
-    - cron: "15 9 * * *" # every day around 9–10am Irish time
+    - cron: "15 9 */2 * *" # every other day (odd dates), around 9–10am Irish time
   workflow_dispatch:
     inputs:
       topic:

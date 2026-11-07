@@ -109,21 +109,22 @@ const NoveltySchema = z.object({
 });
 export type Novelty = z.infer<typeof NoveltySchema>["items"][number];
 
-const NOVELTY_SYSTEM = `You are the duplicate checker of a news site. Readers complain when the same story is published again and again.
+const NOVELTY_SYSTEM = `You are the duplicate checker of a news site. Readers complain when the same story is published again and again, but they also want every genuinely new development.
 
-You get "published": articles the site already published in the last days (original English headline, Persian title, short summary), and "candidates": new headlines from news feeds.
+You get "published": articles the site already published in the last days (original English headline and Persian title), and "candidates": new headlines from news feeds.
+
+Think in EVENTS, not topics. A topic (the EU summit in Dublin, a strike, a murder trial, the bomb hoaxes, a company) can have many separate events, and each separate event with new concrete facts deserves its own article.
 
 For every candidate decide:
-- "duplicate": it is about the same event, match, person-story, show, product or announcement as an earlier published article, even if the headline, the outlet, the angle or the wording is different. Reactions, analysis, interviews, reviews, ratings, photo galleries, "what we learned", player ratings, opinion pieces, "where to watch", recaps and follow-ups that add no major new fact are ALL duplicates. Two candidates about the same story: only the first one can be "new"; the others are duplicates of it (same_as = -1).
-- "update": the same story as an earlier article, but with a MAJOR new development that a reader would really want to know: a final result after earlier reporting, an official decision, a charge or verdict, a death toll that changed, a date or price that was announced, a policy reversed. Small extra details, quotes and reactions are not enough. Be strict.
-- "new": a different story that the site has not covered.
+- "duplicate": it reports the SAME event as an earlier article and adds no major new fact. Typical duplicates: the same match result again (reports, reactions, player ratings, "what we learned", the coach's comments), the same TV show or film or gig again (previews, interviews with the cast, reviews), the same announcement or report from another outlet, analysis, opinion, explainers, recaps and "where to watch" pieces about something already covered, round-ups of the day's news.
+- "update": the same story as an earlier article, with a major new development: an official decision, a final result, a charge, verdict or sentence, a new number (deaths, jobs, prices, dates) that was not known, a new turn in the story (for example fighter jets scrambled after a flight diversion that was already reported), a policy change or reversal.
+- "new": a separate event, even when the topic is the same as an earlier article (for example "Aer Lingus cuts 500 jobs" is new after "Aer Lingus profit falls"; "maternity hospital keeps emergency access during the summit" is new after "Dublin traffic restrictions for the summit"; "unemployment rate" and "live register" are separate statistics).
 
-same_as: the index of the earlier published article for "duplicate"/"update", otherwise -1.
-new_facts: for "update", the major new facts in one short English sentence; otherwise "".
-When unsure between duplicate and update, choose duplicate.`;
+same_as: the index of the earlier published article for "duplicate"/"update", otherwise -1. If two candidates in the list report the same event, only the first can be "new"; the later one is a "duplicate" with same_as -1.
+new_facts: for "update", the major new facts in one short English sentence; otherwise "".`;
 
 export async function checkNovelty(
-  published: { index: number; source_title: string; title_fa: string; summary_fa: string }[],
+  published: { index: number; source_title: string; title_fa: string }[],
   candidates: { index: number; title: string; summary: string }[],
 ): Promise<Map<number, Novelty> | null> {
   if (!candidates.length) return new Map();
@@ -133,7 +134,16 @@ export async function checkNovelty(
       max_tokens: 8000,
       output_config: { effort: "low", format: zodOutputFormat(NoveltySchema) },
       system: NOVELTY_SYSTEM,
-      messages: [{ role: "user", content: JSON.stringify({ published, candidates }) }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            // The published list changes slowly between hourly runs, so it is cached.
+            { type: "text", text: JSON.stringify({ published }), cache_control: { type: "ephemeral" } },
+            { type: "text", text: JSON.stringify({ candidates }) },
+          ],
+        },
+      ],
     });
     if (response.stop_reason === "refusal" || !response.parsed_output) return null;
     return new Map(response.parsed_output.items.map((x) => [x.index, x]));

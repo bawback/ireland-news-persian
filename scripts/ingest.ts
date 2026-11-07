@@ -183,7 +183,7 @@ async function main() {
   for (const cand of funRanked) if (pool.length < newsInPool + MAX_FUN_PER_RUN * 4 && quickNew(cand.it.title)) pool.push(cand);
 
   const verdicts = await checkNovelty(
-    coveredArticles.map((a, index) => ({ index, source_title: a.source_title, title_fa: a.title_fa, summary_fa: a.summary_fa.slice(0, 200) })),
+    coveredArticles.map((a, index) => ({ index, source_title: a.source_title, title_fa: a.title_fa })),
     pool.map((x, index) => ({ index, title: x.it.title, summary: x.it.summary.slice(0, 300) })),
   );
   if (!verdicts) console.warn("novelty check unavailable; using the headline-overlap check only");

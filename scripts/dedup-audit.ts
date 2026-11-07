@@ -26,7 +26,7 @@ async function main() {
   for (let i = 0; i < rows.length; i += 12) {
     const batch = rows.slice(i, i + 12);
     const v = await checkNovelty(
-      kept.map((a, index) => ({ index, source_title: a.source_title ?? "", title_fa: a.title_fa, summary_fa: (a.summary_fa ?? "").slice(0, 200) })),
+      kept.map((a, index) => ({ index, source_title: a.source_title ?? "", title_fa: a.title_fa })),
       batch.map((a, index) => ({ index, title: a.source_title ?? a.title_fa, summary: (a.summary_fa ?? "").slice(0, 300) })),
     );
     if (!v) throw new Error("novelty check failed");

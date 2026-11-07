@@ -92,6 +92,58 @@ function clamp(n: number, min: number, max: number): number {
 }
 
 // ---------------------------------------------------------------------------
+// 1b) Novelty: is a candidate really new, or the same story we already published?
+// ---------------------------------------------------------------------------
+
+const NoveltySchema = z.object({
+  items: z.array(
+    z.object({
+      index: z.number().int(),
+      verdict: z.enum(["new", "duplicate", "update"]),
+      /** Index in the "published" list of the earlier article about the same story, or -1. */
+      same_as: z.number().int(),
+      /** For "update": the concrete new facts in one English sentence. */
+      new_facts: z.string(),
+    }),
+  ),
+});
+export type Novelty = z.infer<typeof NoveltySchema>["items"][number];
+
+const NOVELTY_SYSTEM = `You are the duplicate checker of a news site. Readers complain when the same story is published again and again.
+
+You get "published": articles the site already published in the last days (original English headline, Persian title, short summary), and "candidates": new headlines from news feeds.
+
+For every candidate decide:
+- "duplicate": it is about the same event, match, person-story, show, product or announcement as an earlier published article, even if the headline, the outlet, the angle or the wording is different. Reactions, analysis, interviews, reviews, ratings, photo galleries, "what we learned", player ratings, opinion pieces, "where to watch", recaps and follow-ups that add no major new fact are ALL duplicates. Two candidates about the same story: only the first one can be "new"; the others are duplicates of it (same_as = -1).
+- "update": the same story as an earlier article, but with a MAJOR new development that a reader would really want to know: a final result after earlier reporting, an official decision, a charge or verdict, a death toll that changed, a date or price that was announced, a policy reversed. Small extra details, quotes and reactions are not enough. Be strict.
+- "new": a different story that the site has not covered.
+
+same_as: the index of the earlier published article for "duplicate"/"update", otherwise -1.
+new_facts: for "update", the major new facts in one short English sentence; otherwise "".
+When unsure between duplicate and update, choose duplicate.`;
+
+export async function checkNovelty(
+  published: { index: number; source_title: string; title_fa: string; summary_fa: string }[],
+  candidates: { index: number; title: string; summary: string }[],
+): Promise<Map<number, Novelty> | null> {
+  if (!candidates.length) return new Map();
+  try {
+    const response = await client.messages.parse({
+      model: CLASSIFIER_MODEL,
+      max_tokens: 8000,
+      output_config: { effort: "low", format: zodOutputFormat(NoveltySchema) },
+      system: NOVELTY_SYSTEM,
+      messages: [{ role: "user", content: JSON.stringify({ published, candidates }) }],
+    });
+    if (response.stop_reason === "refusal" || !response.parsed_output) return null;
+    return new Map(response.parsed_output.items.map((x) => [x.index, x]));
+  } catch (e) {
+    console.warn("  novelty check failed:", String(e).slice(0, 300));
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 2) Writing: translation (open licence) or original report (media)
 // ---------------------------------------------------------------------------
 
@@ -246,6 +298,8 @@ export async function writeArticle(input: {
   light?: boolean;
   /** "babak" = write in the owner's voice; default from WRITER_VOICE. */
   voice?: string;
+  /** This is an update to an earlier article: lead with what is new. */
+  updateOf?: { title_fa: string; new_facts: string };
 }): Promise<WrittenArticle | null> {
   // The small model occasionally returns broken JSON; one retry fixes almost all of those.
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -283,7 +337,11 @@ async function writeArticleOnce(input: Parameters<typeof writeArticle>[0]): Prom
       messages: [
         {
           role: "user",
-          content: `Source: ${input.sourceName}\nPublished: ${input.publishedAt}\nOriginal headline: ${input.title}\n\n<source_text>\n${input.text}\n</source_text>`,
+          content:
+            (input.updateOf
+              ? `THIS IS AN UPDATE to a story we already published as «${input.updateOf.title_fa}». The new development: ${input.updateOf.new_facts}\nThe title and the first paragraph must be about the new development, not repeat the old story. Mention the background only briefly.\n\n`
+              : "") +
+            `Source: ${input.sourceName}\nPublished: ${input.publishedAt}\nOriginal headline: ${input.title}\n\n<source_text>\n${input.text}\n</source_text>`,
         },
       ],
     });

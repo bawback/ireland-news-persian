@@ -12,7 +12,7 @@ import { createHash } from "node:crypto";
 import { SOURCES, type Source } from "./sources";
 import { fetchFeed, type FeedItem } from "./lib/feeds";
 import { extractArticleText } from "./lib/extract";
-import { classifyItems, cleanArticle, writeArticle, WRITER_MODEL, WRITER_MODEL_IMPORTANT, type Classification } from "./lib/ai";
+import { checkNovelty, classifyItems, cleanArticle, writeArticle, WRITER_MODEL, WRITER_MODEL_IMPORTANT, type Classification } from "./lib/ai";
 import { adminDb } from "./lib/db";
 import { envBool, envInt } from "./lib/env";
 import { refreshSite } from "./lib/revalidate";
@@ -78,16 +78,25 @@ async function classifyAll(items: FeedItem[]): Promise<Map<string, Classificatio
   return out;
 }
 
+// How far back we look for "already covered" stories.
+const DEDUP_HOURS = envInt("DEDUP_HOURS", 96);
+
 async function recentStoryKeys(): Promise<Set<string>> {
-  const since = new Date(Date.now() - 48 * 3600_000).toISOString();
+  const since = new Date(Date.now() - DEDUP_HOURS * 3600_000).toISOString();
   const { data } = await db.from("raw_items").select("story_key").eq("status", "done").gte("created_at", since);
   return new Set((data ?? []).map((r) => r.story_key).filter(Boolean));
 }
 
-async function recentTitles(): Promise<string[]> {
-  const since = new Date(Date.now() - 48 * 3600_000).toISOString();
-  const { data } = await db.from("articles").select("source_title").gte("created_at", since);
-  return (data ?? []).map((r) => r.source_title).filter(Boolean);
+type Covered = { source_title: string; title_fa: string; summary_fa: string };
+async function recentArticles(): Promise<Covered[]> {
+  const since = new Date(Date.now() - DEDUP_HOURS * 3600_000).toISOString();
+  const { data } = await db
+    .from("articles")
+    .select("source_title, title_fa, summary_fa")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(150);
+  return (data ?? []).filter((r) => r.source_title || r.title_fa) as Covered[];
 }
 
 // Words too common in Irish headlines to say anything about which story it is.
@@ -155,31 +164,57 @@ async function main() {
     if (!prev || s.priority > prev.s.priority) bestByStory.set(c.story_key, { it, c, s });
   }
 
-  const covered = await recentTitles();
-  const chosen: { it: FeedItem; c: Classification; s: Source }[] = [];
-  const isNew = (title: string) => !covered.some((t) => sameStory(t, title)) && !chosen.some((x) => sameStory(x.it.title, title));
+  const coveredArticles = await recentArticles();
+  const covered = coveredArticles.map((a) => a.source_title).filter(Boolean);
+  type Cand = { it: FeedItem; c: Classification; s: Source; updateOf?: { title_fa: string; new_facts: string } };
   const all_ = [...bestByStory.values()];
-  // 1) news lane
-  let n = 0;
-  for (const cand of all_.filter((x) => x.c.category !== "entertainment").sort((a, b) => score(b.c, b.s) - score(a.c, a.s))) {
-    if (n >= MAX_ARTICLES_PER_RUN) break;
-    if (!isNew(cand.it.title)) continue;
-    chosen.push(cand);
-    n++;
-  }
-  // 2) fun lane
-  let f = 0;
+
+  // Shortlist by score (cheap word-overlap filter first), then ask the model which ones are
+  // really new: the same story from another outlet, or a reaction/review/analysis of a story
+  // we already published, is a duplicate. Only a major new development counts as an update.
+  const pool: Cand[] = [];
+  const quickNew = (title: string) =>
+    !covered.some((t) => sameStory(t, title)) && !pool.some((x) => sameStory(x.it.title, title));
+  const newsRanked = all_.filter((x) => x.c.category !== "entertainment").sort((a, b) => score(b.c, b.s) - score(a.c, a.s));
   const funScore = (x: { c: Classification; s: Source }) => x.c.fun_appeal * 3 + x.c.importance + x.s.priority / 5;
-  for (const cand of all_.filter((x) => isFun(x.c)).sort((a, b) => funScore(b) - funScore(a))) {
-    if (f >= MAX_FUN_PER_RUN) break;
-    if (!isNew(cand.it.title)) continue;
+  const funRanked = all_.filter((x) => isFun(x.c)).sort((a, b) => funScore(b) - funScore(a));
+  for (const cand of newsRanked) if (pool.length < MAX_ARTICLES_PER_RUN * 4 && quickNew(cand.it.title)) pool.push(cand);
+  const newsInPool = pool.length;
+  for (const cand of funRanked) if (pool.length < newsInPool + MAX_FUN_PER_RUN * 4 && quickNew(cand.it.title)) pool.push(cand);
+
+  const verdicts = await checkNovelty(
+    coveredArticles.map((a, index) => ({ index, source_title: a.source_title, title_fa: a.title_fa, summary_fa: a.summary_fa.slice(0, 200) })),
+    pool.map((x, index) => ({ index, title: x.it.title, summary: x.it.summary.slice(0, 300) })),
+  );
+  if (!verdicts) console.warn("novelty check unavailable; using the headline-overlap check only");
+
+  const chosen: Cand[] = [];
+  let n = 0;
+  let f = 0;
+  for (const [i, cand] of pool.entries()) {
+    const fun = cand.c.category === "entertainment";
+    const v = verdicts?.get(i);
+    // Light stories never get "updates": one article per show, gig or quirky story is enough.
+    if (v && (v.verdict === "duplicate" || (v.verdict === "update" && fun))) {
+      console.log(`  ⨯ duplicate: ${cand.it.title}${v.same_as >= 0 ? `  (= ${coveredArticles[v.same_as]?.source_title})` : ""}`);
+      await db.from("raw_items").update({ status: "duplicate" }).eq("url", cand.it.url);
+      continue;
+    }
+    if (fun ? f >= MAX_FUN_PER_RUN : n >= MAX_ARTICLES_PER_RUN) continue;
+    if (v?.verdict === "update") {
+      const old = coveredArticles[v.same_as];
+      if (!old || !v.new_facts.trim()) continue;
+      cand.updateOf = { title_fa: old.title_fa, new_facts: v.new_facts };
+      console.log(`  ↻ update: ${cand.it.title} — ${v.new_facts}`);
+    }
     chosen.push(cand);
-    f++;
+    if (fun) f++;
+    else n++;
   }
   console.log(`${bestByStory.size} distinct stories, writing ${chosen.length}\n`);
 
   let written = 0;
-  for (const { it, c, s } of chosen) {
+  for (const { it, c, s, updateOf } of chosen) {
     console.log(`→ [${s.nameEn}] ${it.title}`);
     const fullText = (await extractArticleText(it.url)) ?? it.content ?? "";
     const text = fullText.length > it.summary.length ? fullText : `${it.title}\n\n${it.summary}`;
@@ -187,7 +222,7 @@ async function main() {
 
     const important = c.importance >= 4 || c.immigrant_relevance >= 3;
     const model = important ? WRITER_MODEL_IMPORTANT : WRITER_MODEL;
-    const written_ = await writeArticle({ model, mode, sourceName: s.nameEn, title: it.title, publishedAt: it.publishedAt, text, light: c.category === "entertainment" });
+    const written_ = await writeArticle({ model, mode, sourceName: s.nameEn, title: it.title, publishedAt: it.publishedAt, text, light: c.category === "entertainment", updateOf });
     const article = written_ && (await cleanArticle(written_));
     if (!article) {
       await db.from("raw_items").update({ status: "failed" }).eq("url", it.url);

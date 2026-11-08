@@ -83,6 +83,11 @@ async function main() {
   const pastDate = envOptional("PODCAST_DATE")?.trim() || "";
   const date = pastDate || now.date;
   const hour = now.hour;
+  // Paused while a better voice is being tested; a forced or past-date run still works.
+  if (!force && !pastDate && envBool("PODCAST_PAUSED", false)) {
+    console.log("Podcast is paused (PODCAST_PAUSED); nothing to do.");
+    return;
+  }
   if (!force && !pastDate && !envBool("PODCAST_DELETE", false) && !envBool("PODCAST_TELEGRAM_ONLY", false) && hour !== 22) {
     console.log(`It is ${hour}:xx in Dublin, not 22:xx; nothing to do.`);
     return;

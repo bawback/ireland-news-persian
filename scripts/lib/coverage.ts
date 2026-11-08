@@ -2,7 +2,7 @@
  * "Hot story" counter. Every time another outlet (or the same outlet again) reports a story
  * we already published, the earlier article's counter goes up. Stored in articles.social.coverage
  * so no database change is needed. At HOT_AT reports the article gets the «خبر داغ» badge
- * and its importance goes up by one (so the podcast and the home page favour it).
+ * and its importance goes up by one (so the home page favours it).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 

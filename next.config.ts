@@ -9,6 +9,13 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "4mb" },
   },
   poweredByHeader: false,
+  // The podcast was discontinued; old links (Telegram posts, podcast apps) go to the home page.
+  async redirects() {
+    return [
+      { source: "/podcast", destination: "/", permanent: true },
+      { source: "/podcast.xml", destination: "/", permanent: true },
+    ];
+  },
   async headers() {
     const security = [
       { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },

@@ -8,7 +8,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const articles = await getLatest(1000);
   return [
     { url: SITE.url, changeFrequency: "hourly", priority: 1 },
-    { url: `${SITE.url}/podcast`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE.url}/guides`, changeFrequency: "weekly", priority: 0.8 },
     ...GUIDES.map((g) => ({ url: `${SITE.url}/guides/${g.slug}`, lastModified: g.updated, changeFrequency: "weekly" as const, priority: 0.9 })),
     ...CATEGORIES.map((c) => ({ url: `${SITE.url}/category/${c.slug}`, changeFrequency: "hourly" as const })),

@@ -1,7 +1,7 @@
 /**
  * Keeps storage small: pictures of articles older than IMAGE_KEEP_DAYS (default 30) are deleted
  * from storage and removed from the article. Only our own pictures (news-images bucket) are
- * touched; podcasts and guides are not.
+ * touched; guide pictures are not.
  */
 import { adminDb } from "./lib/db";
 import { envInt } from "./lib/env";

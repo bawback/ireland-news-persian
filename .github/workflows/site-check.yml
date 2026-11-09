@@ -16,7 +16,7 @@ jobs:
           for u in http://irelandnewspersian.com/ https://irelandnewspersian.com/ http://www.irelandnewspersian.com/ https://www.irelandnewspersian.com/ https://irelandnewspersian.com/guides/ https://irelandnewspersian.com/podcast; do
             printf "%-50s " "$u"; curl -sS -o /dev/null -w "%{http_code} -> %{redirect_url}\n" "$u"
           done
-          curl -sS https://irelandnewspersian.com/sitemap.xml -o sitemap.xml
+          curl -sS https://www.irelandnewspersian.com/sitemap.xml -o sitemap.xml
           echo "sitemap urls: $(grep -c '<loc>' sitemap.xml)"
           grep -o '<loc>[^<]*</loc>' sitemap.xml | sed 's/<[^>]*>//g' | awk -F/ '{print $1"//"$3}' | sort | uniq -c
           echo "--- sitemap URLs that do not answer 200:"
@@ -24,5 +24,5 @@ jobs:
             c=$(curl -sS -o /dev/null -w "%{http_code} %{redirect_url}" "$u"); case "$c" in 200*) ;; *) echo "$c  $u";; esac
           done | head -40
           echo "--- canonical of home:"
-          curl -sS https://irelandnewspersian.com/ | grep -o '<link rel="canonical"[^>]*>'
-          curl -sS https://irelandnewspersian.com/robots.txt
+          curl -sS https://www.irelandnewspersian.com/ | grep -o '<link rel="canonical"[^>]*>'
+          curl -sS https://www.irelandnewspersian.com/robots.txt; echo; echo "--- canonical of an article:"; a=$(grep -o "<loc>[^<]*/news/[^<]*</loc>" sitemap.xml | head -1 | sed "s/<[^>]*>//g"); curl -sS "$a" | grep -o "<link rel=\"canonical\"[^>]*>"; echo "--- www/podcast:"; curl -sS -o /dev/null -w "%{http_code} -> %{redirect_url}\n" https://www.irelandnewspersian.com/podcast

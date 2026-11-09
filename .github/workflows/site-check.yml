@@ -8,4 +8,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - run: curl -sS "${{ vars.SITE_URL }}/api/health"; echo
+      - name: Health
+        run: curl -sS "${{ vars.SITE_URL }}/api/health"; echo
+      - name: Redirects and sitemap
+        run: |
+          echo "SITE_URL=${{ vars.SITE_URL }}"
+          for u in http://irelandnewspersian.com/ https://irelandnewspersian.com/ http://www.irelandnewspersian.com/ https://www.irelandnewspersian.com/ https://irelandnewspersian.com/guides/ https://irelandnewspersian.com/podcast; do
+            printf "%-50s " "$u"; curl -sS -o /dev/null -w "%{http_code} -> %{redirect_url}\n" "$u"
+          done
+          curl -sS https://irelandnewspersian.com/sitemap.xml -o sitemap.xml
+          echo "sitemap urls: $(grep -c '<loc>' sitemap.xml)"
+          grep -o '<loc>[^<]*</loc>' sitemap.xml | sed 's/<[^>]*>//g' | awk -F/ '{print $1"//"$3}' | sort | uniq -c
+          echo "--- sitemap URLs that do not answer 200:"
+          for u in $(grep -o '<loc>[^<]*</loc>' sitemap.xml | sed 's/<[^>]*>//g'); do
+            c=$(curl -sS -o /dev/null -w "%{http_code} %{redirect_url}" "$u"); case "$c" in 200*) ;; *) echo "$c  $u";; esac
+          done | head -40
+          echo "--- canonical of home:"
+          curl -sS https://irelandnewspersian.com/ | grep -o '<link rel="canonical"[^>]*>'
+          curl -sS https://irelandnewspersian.com/robots.txt

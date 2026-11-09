@@ -10,6 +10,7 @@ import { SITE } from "@/lib/site";
 import { ArticleBody } from "@/components/ArticleBody";
 import { BidiText } from "@/components/BidiText";
 import { ShareButtons } from "@/components/ShareButtons";
+import { TelegramCta } from "@/components/TelegramCta";
 import { CompactItem } from "@/components/ArticleCard";
 import { JsonLd } from "@/components/JsonLd";
 import { cacheLife } from "next/cache";
@@ -165,6 +166,8 @@ async function ArticleView({ slug }: { slug: string }) {
         <div className="mt-6">
           <ArticleBody body={a.body_fa} />
         </div>
+
+        <TelegramCta />
 
         <footer className="mt-10 space-y-4 rounded-xl border border-line bg-surface p-5 text-sm leading-7">
           {a.source_url ? (

@@ -1,0 +1,41 @@
+name: Morning digest
+
+on:
+  schedule:
+    # 08:00 in Dublin is 08:00 UTC in winter and 07:00 UTC in summer; the script checks the hour.
+    - cron: "2 7,8 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Post now, whatever the time"
+        type: boolean
+        default: false
+      dry_run:
+        description: "Only show the message in the log, do not post"
+        type: boolean
+        default: false
+
+concurrency:
+  group: morning-digest
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/post-digest.ts
+        env:
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}

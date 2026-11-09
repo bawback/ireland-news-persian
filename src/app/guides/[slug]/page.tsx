@@ -8,6 +8,7 @@ import { ArticleBody } from "@/components/ArticleBody";
 import { BidiText } from "@/components/BidiText";
 import { JsonLd } from "@/components/JsonLd";
 import { ShareButtons } from "@/components/ShareButtons";
+import { TelegramCta } from "@/components/TelegramCta";
 
 export function generateStaticParams() {
   return GUIDES.map((g) => ({ slug: g.slug }));
@@ -129,6 +130,8 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
       <div className="mt-6">
         <ArticleBody body={g.body} />
       </div>
+
+        <TelegramCta />
 
       <section className="mt-10" aria-labelledby="faq">
         <h2 id="faq" className="mb-4 scroll-mt-36 text-2xl font-black">{g.faqTitle ?? "پرسش‌های رایج"}</h2>

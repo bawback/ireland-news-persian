@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { DemoBanner } from "@/components/DemoBanner";
 import { SITE } from "@/lib/site";
+import { SiteAnalytics } from "@/components/SiteAnalytics";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Header />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">{children}</main>
         <Footer />
+        <SiteAnalytics />
       </body>
     </html>
   );

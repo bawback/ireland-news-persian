@@ -42,7 +42,7 @@ async function main() {
         continue;
       }
       const c = await cleanArticle(w);
-      out.push(`### بعد — ${label}\n\n**تیتر:** ${c.title_fa}\n\n**خلاصه:** ${c.summary_fa}\n\n${c.body_fa}\n`);
+      out.push(`### بعد — ${label}\n\n**تیتر:** ${c.title_fa}\n\n**خلاصه:** ${c.summary_fa}\n\n${c.body_fa}\n\n**پست تلگرام:**\n\n${c.telegram_post}\n`);
     }
   }
   const md = out.join("\n");

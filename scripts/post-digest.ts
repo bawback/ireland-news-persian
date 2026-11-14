@@ -1,6 +1,6 @@
 /**
  * Morning digest for the Telegram channel: the 5 most important stories of the last 24 hours.
- * Runs at 07:00 and 08:00 UTC (GitHub schedule); posts only at 08:xx Dublin time (or with FORCE),
+ * Runs every hour inside the news pipeline; posts only at 08:xx Dublin time (or with FORCE),
  * and only once a day: a small marker file in storage remembers that today's digest was sent.
  */
 import { adminDb } from "./lib/db";

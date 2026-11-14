@@ -1,9 +1,8 @@
 name: Morning digest
 
 on:
-  schedule:
-    # 08:00 in Dublin is 08:00 UTC in winter and 07:00 UTC in summer; the script checks the hour.
-    - cron: "2 7,8 * * *"
+  # Runs automatically inside the hourly news pipeline (started by pg_cron), because GitHub's
+  # own schedule was hours late. This workflow is for running it by hand.
   workflow_dispatch:
     inputs:
       force:

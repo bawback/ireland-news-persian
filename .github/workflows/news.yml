@@ -53,6 +53,14 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
           IMAGE_KEEP_DAYS: ${{ vars.IMAGE_KEEP_DAYS || '30' }}
+      - name: Morning digest (only at 08:xx Dublin time, once a day)
+        run: npx tsx scripts/post-digest.ts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}
       - name: Post to Telegram
         run: npx tsx scripts/post-telegram.ts
         env:

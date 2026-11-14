@@ -36,36 +36,44 @@ const siteJsonLd = [
   },
 ];
 
+/** Date (YYYY-MM-DD) and hour in Dublin for a moment in time. */
+function dublin(t: number): { day: string; hour: number } {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Dublin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(t);
+  const v = (k: string) => p.find((x) => x.type === k)?.value ?? "";
+  return { day: `${v("year")}-${v("month")}-${v("day")}`, hour: Number(v("hour")) };
+}
+
 /**
- * The big story at the top: the most important and most talked-about story of the last day,
- * not simply the newest. Importance, relevance for immigrants and how many outlets reported it
- * (the «خبر داغ» counter) count most; a picture and freshness help; older stories slowly fade.
+ * The top story is the most important story of the news day: published between 07:00 and midnight
+ * Dublin time. From midnight to 07:00 the previous day's top story stays. It changes as soon as a more
+ * important story arrives. "Important" mostly means how many outlets reported it (the «خبر داغ» counter),
+ * then the editor's importance score and relevance for immigrants. No fading by age within the day.
  */
 function pickLead(articles: Article[]): Article | undefined {
   const now = Date.now();
-  const recent = articles.filter((a) => now - Date.parse(a.published_at) < 24 * 3600_000);
-  const pool = recent.length >= 3 ? recent : articles;
-  const score = (a: Article) => {
-    const hours = (now - Date.parse(a.published_at)) / 3600_000;
-    return (
-      a.importance * 2 +
-      a.immigrant_relevance * 1.5 +
-      Math.min(coverageOf(a), 6) * 1.5 +
-      (a.image_url ? 1 : 0) -
-      hours / 8
-    );
-  };
-  return [...pool].sort((x, y) => score(y) - score(x))[0];
+  const today = dublin(now);
+  const yesterday = dublin(now - 24 * 3600_000).day;
+  const inDay = (day: string) =>
+    articles.filter((a) => {
+      const d = dublin(Date.parse(a.published_at));
+      return d.day === day && d.hour >= 7;
+    });
+  let pool = today.hour >= 7 ? inDay(today.day) : [];
+  if (!pool.length) pool = inDay(yesterday);
+  if (!pool.length) pool = articles;
+  const score = (a: Article) =>
+    Math.min(coverageOf(a), 10) * 3 + a.importance * 2 + a.immigrant_relevance * 1 + (a.image_url ? 0.5 : 0);
+  return [...pool].sort((x, y) => score(y) - score(x) || Date.parse(y.published_at) - Date.parse(x.published_at))[0];
 }
 
 export default async function HomePage() {
   "use cache";
   cacheLife("minutes");
-  const [latest, immigrant] = await Promise.all([getLatest(30), getImmigrantHighlights(6)]);
+  const [latest, immigrant] = await Promise.all([getLatest(80), getImmigrantHighlights(6)]);
   const lead = pickLead(latest);
   const rest = latest.filter((a) => a !== lead);
   const side = rest.slice(0, 5);
-  const grid = rest.slice(5);
+  const grid = rest.slice(5, 29);
 
   if (!lead) {
     return <p className="py-20 text-center text-muted">هنوز خبری منتشر نشده است.</p>;

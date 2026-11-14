@@ -44,7 +44,7 @@ const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Dublin"
 
 /** Sonnet 5.5 list prices (USD per million tokens) and web search ($10 per 1,000). */
 const PRICE = { in: 2, out: 10, cacheRead: 0.2, cacheWrite: 2.5, search: 0.01 };
-const RESEARCH_BUDGET_USD = 0.6;
+const RESEARCH_BUDGET_USD = 1.5;
 let cost = 0;
 type UsageLike = {
   input_tokens?: number | null;
@@ -70,8 +70,8 @@ function track(step: string, u: UsageLike) {
 async function research(t: SeoTopic): Promise<{ notes: string; urls: Set<string> }> {
   const tools = [
     // Cost control: every fetched page is re-read on each later step, so keep pages short and few.
-    { type: "web_search_20260209", name: "web_search", max_uses: 4, allowed_domains: DOMAINS },
-    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 5, max_content_tokens: 6000, allowed_domains: DOMAINS },
+    { type: "web_search_20260209", name: "web_search", max_uses: 6, allowed_domains: DOMAINS },
+    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 8, max_content_tokens: 10000, allowed_domains: DOMAINS },
   ] as unknown as Anthropic.Messages.ToolUnion[];
   const messages: Anthropic.Messages.MessageParam[] = [
     {
@@ -94,7 +94,7 @@ Return research notes in English:
   ];
   const urls = new Set<string>();
   let notes = "";
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     const res = await client.messages.create({ model: MODEL, max_tokens: 16000, tools, messages });
     track("research", res.usage);
     for (const m of JSON.stringify(res.content).matchAll(/https?:\/\/[^"\\\s)]+/g)) urls.add(m[0].replace(/[.,]+$/, ""));
@@ -152,10 +152,10 @@ async function writeGuide(t: SeoTopic, notes: string, others: { slug: string; ti
   // Long Persian output: stream it (required for long requests) and validate the JSON ourselves.
   const stream = client.beta.messages.stream({
     model: MODEL,
-    max_tokens: 32000,
+    max_tokens: 48000,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default" as const,
-    output_config: { effort: "medium", format: betaZodOutputFormat(GuideSchema) },
+    output_config: { effort: "high", format: betaZodOutputFormat(GuideSchema) },
     system: writerSystem(others),
     messages: [
       {

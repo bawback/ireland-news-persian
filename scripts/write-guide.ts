@@ -40,12 +40,38 @@ type Saved = {
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Dublin" }).format(new Date());
 
+// ------------------------------------------------------------------ cost tracking
+
+/** Sonnet 5.5 list prices (USD per million tokens) and web search ($10 per 1,000). */
+const PRICE = { in: 2, out: 10, cacheRead: 0.2, cacheWrite: 2.5, search: 0.01 };
+const RESEARCH_BUDGET_USD = 0.6;
+let cost = 0;
+type UsageLike = {
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  server_tool_use?: { web_search_requests?: number | null } | null;
+};
+function track(step: string, u: UsageLike) {
+  const c =
+    ((u.input_tokens ?? 0) * PRICE.in +
+      (u.output_tokens ?? 0) * PRICE.out +
+      (u.cache_read_input_tokens ?? 0) * PRICE.cacheRead +
+      (u.cache_creation_input_tokens ?? 0) * PRICE.cacheWrite) /
+      1e6 +
+    (u.server_tool_use?.web_search_requests ?? 0) * PRICE.search;
+  cost += c;
+  console.log(`  [cost] ${step}: in ${u.input_tokens}, out ${u.output_tokens}, searches ${u.server_tool_use?.web_search_requests ?? 0} ≈ $${c.toFixed(2)} (total $${cost.toFixed(2)})`);
+}
+
 // ------------------------------------------------------------------ 1) research
 
 async function research(t: SeoTopic): Promise<{ notes: string; urls: Set<string> }> {
   const tools = [
-    { type: "web_search_20260209", name: "web_search", max_uses: 8, allowed_domains: DOMAINS },
-    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 10, allowed_domains: DOMAINS },
+    // Cost control: every fetched page is re-read on each later step, so keep pages short and few.
+    { type: "web_search_20260209", name: "web_search", max_uses: 4, allowed_domains: DOMAINS },
+    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 5, max_content_tokens: 6000, allowed_domains: DOMAINS },
   ] as unknown as Anthropic.Messages.ToolUnion[];
   const messages: Anthropic.Messages.MessageParam[] = [
     {
@@ -68,11 +94,12 @@ Return research notes in English:
   ];
   const urls = new Set<string>();
   let notes = "";
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 3; i++) {
     const res = await client.messages.create({ model: MODEL, max_tokens: 16000, tools, messages });
+    track("research", res.usage);
     for (const m of JSON.stringify(res.content).matchAll(/https?:\/\/[^"\\\s)]+/g)) urls.add(m[0].replace(/[.,]+$/, ""));
     notes += res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === "text").map((b) => b.text).join("\n");
-    if (res.stop_reason === "pause_turn") {
+    if (res.stop_reason === "pause_turn" && cost < RESEARCH_BUDGET_USD) {
       messages.push({ role: "assistant", content: res.content });
       continue;
     }
@@ -125,7 +152,7 @@ async function writeGuide(t: SeoTopic, notes: string, others: { slug: string; ti
   // Long Persian output: stream it (required for long requests) and validate the JSON ourselves.
   const stream = client.beta.messages.stream({
     model: MODEL,
-    max_tokens: 64000,
+    max_tokens: 32000,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default" as const,
     output_config: { effort: "medium", format: betaZodOutputFormat(GuideSchema) },
@@ -138,6 +165,7 @@ async function writeGuide(t: SeoTopic, notes: string, others: { slug: string; ti
     ],
   });
   const msg = await stream.finalMessage();
+  track("write", msg.usage as UsageLike);
   if (msg.stop_reason !== "end_turn") throw new Error(`writer stopped: ${msg.stop_reason}`);
   const text = msg.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
   return GuideSchema.parse(JSON.parse(text));

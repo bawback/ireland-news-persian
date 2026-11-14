@@ -15,7 +15,7 @@ function Cover({ a, className }: { a: Article; className: string }) {
       height={675}
       loading="lazy"
       decoding="async"
-      className={`w-full object-cover ${className}`}
+      className={`h-auto w-full max-w-full object-cover ${className}`}
     />
   );
 }
@@ -39,7 +39,7 @@ export function LeadCard({ a }: { a: Article }) {
       href={`/news/${a.slug}`}
       className="group block rounded-2xl border border-line bg-surface p-6 shadow-sm transition hover:shadow-md sm:p-8"
     >
-      <Cover a={a} className="mb-5 aspect-[16/9] rounded-xl" />
+      <Cover a={a} className="mb-5 block aspect-[16/9] rounded-xl" />
       <Meta a={a} />
       <h2 className="mt-4 text-2xl leading-[1.6] font-black group-hover:text-brand sm:text-[2rem]">
         <BidiText text={a.title_fa} />
@@ -56,16 +56,18 @@ export function ArticleCard({ a }: { a: Article }) {
   return (
     <Link
       href={`/news/${a.slug}`}
-      className="group flex h-full flex-col rounded-xl border border-line bg-surface p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface transition hover:shadow-md"
     >
-      <Cover a={a} className="-mx-5 -mt-5 mb-4 aspect-[16/9] w-[calc(100%+2.5rem)] max-w-none rounded-t-xl" />
-      <Meta a={a} />
-      <h3 className="mt-3 text-lg leading-8 font-bold group-hover:text-brand">
-        <BidiText text={a.title_fa} />
-      </h3>
-      <p className="mt-2 line-clamp-3 text-[15px] leading-7 text-muted">
-        <BidiText text={a.summary_fa} />
-      </p>
+      <Cover a={a} className="block aspect-[16/9] shrink-0" />
+      <div className="flex flex-1 flex-col p-5">
+        <Meta a={a} />
+        <h3 className="mt-3 text-lg leading-8 font-bold group-hover:text-brand">
+          <BidiText text={a.title_fa} />
+        </h3>
+        <p className="mt-2 line-clamp-3 text-[15px] leading-7 text-muted">
+          <BidiText text={a.summary_fa} />
+        </p>
+      </div>
     </Link>
   );
 }

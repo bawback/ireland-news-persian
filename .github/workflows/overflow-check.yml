@@ -12,7 +12,7 @@ jobs:
       - run: |
           mkdir /tmp/c && cp scripts/tools/overflow-check.mjs /tmp/c/ && cd /tmp/c
           npm init -y >/dev/null && npm i playwright@1 >/dev/null
-          npx playwright install --with-deps chromium >/dev/null
+          npx playwright install --with-deps chromium webkit >/dev/null
           node overflow-check.mjs
         env:
           SITE_URL: ${{ vars.SITE_URL }}

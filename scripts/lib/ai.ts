@@ -184,7 +184,7 @@ WHO YOU ARE WHEN YOU WRITE
 EXPLAIN UNFAMILIAR TERMS (very important)
 - If the story depends on a word, term or concept that an average Persian reader probably does not know, explain it briefly. Examples: «اسپایکینگ (spiking)», «Garda vetting», «HAP», «leaving cert», «inquest», «Dáil», «work-to-rule», «bail», «live register», «tracker mortgage», «Ard Fheis», «hurling», particular Irish laws, offices and procedures.
 - In body_fa: at the first mention, give the term and its meaning in a short clause or one sentence, e.g. «اسپایکینگ (spiking)، یعنی ریختن مخفیانه مواد مخدر یا الکل در نوشیدنی کسی بدون اطلاع او، ...».
-- In telegram_post: if the post uses such a term, add ONE extra line before the hashtags that starts with «💡» and explains it in one short sentence, e.g. «💡 اسپایکینگ یعنی ریختن مخفیانه مواد مخدر یا الکل در نوشیدنی کسی بدون اطلاع او.» (at most 2 terms; skip the line when nothing needs explaining). Do the same in instagram_caption.
+- In telegram_post: do NOT add any explanation line; a separate editor adds it later.
 - These short definitions are general knowledge, not news facts, so they are allowed even if the source does not explain the term. Keep them accurate, neutral and general: never use them to add claims about this particular story. Do not explain things every reader knows.
 
 WRITING STYLE (Persian)
@@ -214,7 +214,7 @@ OTHER FIELDS
 - summary_fa: 1–2 sentences (max ~45 words) with the core news.
 - tags: 3–6 short Persian tags.
 - slug: 3–8 lowercase English words joined by hyphens, based on the story (ASCII only).
-- telegram_post: first line = one fitting emoji + the headline; then 2–4 short lines with the key facts; then the optional «💡» explanation line (see EXPLAIN UNFAMILIAR TERMS); last line = 3–5 Persian hashtags using underscores (e.g. #اخبار_ایرلند #مهاجرت). Do not include any URL.
+- telegram_post: first line = one fitting emoji + the headline; then 2–4 short lines with the key facts; last line = 3–5 Persian hashtags using underscores (e.g. #اخبار_ایرلند #مهاجرت). Do not include any URL.
 - x_post: max 220 characters, headline-style summary, 1–2 hashtags, no URL.
 - instagram_caption: 3–5 short paragraphs, friendly but factual, then 5–8 hashtags, no URL.
 - whatsapp_post: 2–3 short lines, no hashtags, no URL.
@@ -433,6 +433,49 @@ export async function repairMixedWords(texts: string[]): Promise<Map<string, str
 }
 
 /** Runs the regex fixes and the AI word repair over every Persian field of a written article. */
+// ---------------------------------------------------------------------------
+// 3b) Telegram: second read of the finished post, explaining unclear terms IN it
+// ---------------------------------------------------------------------------
+
+const ExplainSchema = z.object({
+  terms: z.array(z.object({ term: z.string(), explanation: z.string() })),
+});
+
+const EXPLAIN_SYSTEM = `You are the last editor of a short Persian Telegram news post for Iranians in Ireland.
+Read the post as an Iranian who arrived in Ireland only a few months ago. Find words, terms, abbreviations or names of offices, laws, procedures or concepts IN THIS POST that such a reader would probably not understand, and where not understanding them makes the news harder to follow (e.g. «اسپایکینگ», «Garda vetting», «HAP», «inquest», «Dáil», «work-to-rule», «live register», «REIT»).
+Rules:
+- Only terms that appear word for word in the post. Copy each "term" exactly as it is written in the post.
+- At most 2 terms. Most posts need none: if everything is clear, return an empty list. Never explain everyday words, well-known places, or things the post already explains.
+- "explanation": one short Persian sentence (max ~25 words) that starts with the term and says what it is, e.g. «اسپایکینگ یعنی ریختن مخفیانه مواد مخدر یا الکل در نوشیدنی کسی بدون اطلاع او.» General, accurate and neutral; never add facts about this particular story. Persian digits for numbers.`;
+
+/** Removes any old «💡» line, then adds one for terms that really appear in the post and need explaining. */
+export async function explainTelegramTerms(post: string): Promise<string> {
+  const lines = post.split("\n").filter((l) => !l.trim().startsWith("💡"));
+  const clean = lines.join("\n").trim();
+  try {
+    const res = await client.messages.parse({
+      model: CLASSIFIER_MODEL,
+      max_tokens: 4000,
+      output_config: { effort: "low", format: zodOutputFormat(ExplainSchema) },
+      system: EXPLAIN_SYSTEM,
+      messages: [{ role: "user", content: clean }],
+    });
+    const terms = (res.parsed_output?.terms ?? []).filter((t) => t.term.trim() && clean.includes(t.term.trim()) && t.explanation.trim()).slice(0, 2);
+    if (!terms.length) return clean;
+    const notes = terms.map((t) => `💡 ${fixPersian(t.explanation.trim())}`);
+    const out = clean.split("\n");
+    // Before the hashtag line, if the post ends with one.
+    const last = out.length - 1;
+    const at = out[last].trim().startsWith("#") ? last : out.length;
+    out.splice(at, 0, ...notes);
+    console.log(`  explained: ${terms.map((t) => t.term).join(", ")}`);
+    return out.join("\n");
+  } catch (e) {
+    console.warn("  term explanation failed:", String(e).slice(0, 200));
+    return clean;
+  }
+}
+
 export async function cleanArticle(a: WrittenArticle): Promise<WrittenArticle> {
   const fields = [a.title_fa, a.summary_fa, a.body_fa, a.telegram_post, a.x_post, a.instagram_caption, a.whatsapp_post, ...a.tags];
   const fixes = await repairMixedWords(fields);
@@ -444,7 +487,7 @@ export async function cleanArticle(a: WrittenArticle): Promise<WrittenArticle> {
     summary_fa: fix(a.summary_fa),
     body_fa: fix(a.body_fa),
     tags: a.tags.map(fix),
-    telegram_post: fix(a.telegram_post),
+    telegram_post: await explainTelegramTerms(fix(a.telegram_post)),
     x_post: fix(a.x_post),
     instagram_caption: fix(a.instagram_caption),
     whatsapp_post: fix(a.whatsapp_post),

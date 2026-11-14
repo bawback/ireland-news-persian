@@ -1,0 +1,32 @@
+name: Screenshots
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          npm init -y >/dev/null
+          npm i playwright@1 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji >/dev/null
+          node scripts/tools/screenshots.mjs
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+      - name: Push the pictures to the "screenshots" branch
+        run: |
+          mkdir /tmp/s && cp shots/*.png /tmp/s/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan screenshots
+          git rm -rfq . && rm -rf shots node_modules package*.json
+          cp /tmp/s/*.png . && git add *.png
+          git commit -qm "Screenshots $(date -u +%F)"
+          git push -f origin screenshots

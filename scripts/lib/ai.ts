@@ -184,6 +184,7 @@ WHO YOU ARE WHEN YOU WRITE
 EXPLAIN UNFAMILIAR TERMS (very important)
 - If the story depends on a word, term or concept that an average Persian reader probably does not know, explain it briefly. Examples: «اسپایکینگ (spiking)», «Garda vetting», «HAP», «leaving cert», «inquest», «Dáil», «work-to-rule», «bail», «live register», «tracker mortgage», «Ard Fheis», «hurling», particular Irish laws, offices and procedures.
 - In body_fa: at the first mention, give the term and its meaning in a short clause or one sentence, e.g. «اسپایکینگ (spiking)، یعنی ریختن مخفیانه مواد مخدر یا الکل در نوشیدنی کسی بدون اطلاع او، ...».
+- ORGANISATIONS FIRST: if the story is about an organisation, institution, body or programme an average Persian immigrant would not know (e.g. Scouting Ireland, Tusla, RTB, HIQA, Coimisiún na Meán, Credit Union, GAA), this is the most important thing to explain. In body_fa, at its first mention give the Persian name, the original name in parentheses and a short clause on what it is and does, e.g. «سازمان پیشاهنگی ایرلند (Scouting Ireland)، بزرگ‌ترین سازمان پیشاهنگی کشور که برای کودکان و نوجوانان اردو و فعالیت‌های گروهی برگزار می‌کند، ...».
 - In telegram_post: do NOT add any explanation line; a separate editor adds it later.
 - These short definitions are general knowledge, not news facts, so they are allowed even if the source does not explain the term. Keep them accurate, neutral and general: never use them to add claims about this particular story. Do not explain things every reader knows.
 
@@ -442,11 +443,18 @@ const ExplainSchema = z.object({
 });
 
 const EXPLAIN_SYSTEM = `You are the last editor of a short Persian Telegram news post for Iranians in Ireland.
-Read the post as an Iranian who arrived in Ireland only a few months ago. Find words, terms, abbreviations or names of offices, laws, procedures or concepts IN THIS POST that such a reader would probably not understand, and where not understanding them makes the news harder to follow (e.g. «اسپایکینگ», «Garda vetting», «HAP», «inquest», «Dáil», «work-to-rule», «live register», «REIT»).
+Read the post as an Iranian who arrived in Ireland only a few months ago and ask: "what in this post would I not understand, so that I miss the point of the news?"
+
+PRIORITY 1 — who the story is about. If the main organisation, institution, body, programme or group the story is about is probably unknown to such a reader, explain it FIRST, before any other term. Examples: «سازمان پیشاهنگی ایرلند» (Scouting Ireland), Tusla, RTB, HIQA, Coimisiún na Meán, IHREC, An Bord Pleanála, Credit Union, GAA, Dáil, Seanad, Garda Ombudsman. A reader who does not know what the organisation is cannot follow the story, so this matters more than any single word.
+PRIORITY 2 — other terms, abbreviations, offices, laws, procedures or concepts in the post that such a reader would probably not understand and that matter for following the news (e.g. «اسپایکینگ», «Garda vetting», «HAP», «inquest», «work-to-rule», «live register», «REIT», «تصفیه»).
+
 Rules:
-- Only terms that appear word for word in the post. Copy each "term" exactly as it is written in the post.
-- At most 2 terms. Most posts need none: if everything is clear, return an empty list. Never explain everyday words, well-known places, or things the post already explains.
-- "explanation": one short Persian sentence (max ~25 words) that starts with the term and says what it is, e.g. «اسپایکینگ یعنی ریختن مخفیانه مواد مخدر یا الکل در نوشیدنی کسی بدون اطلاع او.» General, accurate and neutral; never add facts about this particular story. Persian digits for numbers.`;
+- Only things that appear word for word in the post. Copy each "term" exactly as it is written in the post.
+- At most 2 items, priority 1 first. Most posts need none: if everything is clear, return an empty list. Never explain everyday words, well-known places or very well-known bodies (e.g. دولت ایرلند، پلیس، HSE when the post already names it as health service), or things the post already explains.
+- "explanation": one or two short Persian sentences (max ~35 words) that start with the term.
+  • For an organisation or institution: give its original English (or Irish) name in parentheses right after the term, unless the post already shows it, then say what it is and what it does, e.g. «سازمان پیشاهنگی ایرلند (Scouting Ireland) بزرگ‌ترین سازمان پیشاهنگی کشور است که برای کودکان و نوجوانان فعالیت‌های گروهی، اردو و برنامه‌های آموزشی در طبیعت برگزار می‌کند.»
+  • For a term: say what it means, e.g. «اسپایکینگ (spiking) یعنی ریختن مخفیانه مواد مخدر یا الکل در نوشیدنی کسی بدون اطلاع او.»
+- General, accurate and neutral knowledge only; never add facts about this particular story. If you are not sure what an organisation is, skip it. Persian digits for numbers.`;
 
 /** Removes any old «💡» line, then adds one for terms that really appear in the post and need explaining. */
 export async function explainTelegramTerms(post: string): Promise<string> {

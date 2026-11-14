@@ -4,12 +4,10 @@
  */
 import { adminDb } from "./lib/db";
 import { env, envOptional } from "./lib/env";
-import { isolateForSocial } from "../src/lib/bidi";
+import { telegramNewsText } from "./lib/telegram-format";
 
 const token = envOptional("TELEGRAM_BOT_TOKEN");
 const channel = envOptional("TELEGRAM_CHANNEL_ID");
-
-const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 async function main() {
   if (!token || !channel) {
@@ -31,16 +29,13 @@ async function main() {
 
   for (const a of articles ?? []) {
     const body = (a.social?.telegram as string | undefined) ?? `${a.title_fa}\n\n${a.summary_fa}`;
-    const lines = isolateForSocial(body).split("\n");
-    // Make the first line (the headline) bold.
-    const text = [`<b>${escapeHtml(lines[0])}</b>`, ...lines.slice(1).map(escapeHtml)].join("\n");
     const link = `${site}/news/${a.slug}`;
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: channel,
-        text: `${text}\n\n‏🔗 <a href="${link}">متن کامل خبر</a>`,
+        text: telegramNewsText(body, link),
         parse_mode: "HTML",
         link_preview_options: { url: link, prefer_large_media: true },
       }),

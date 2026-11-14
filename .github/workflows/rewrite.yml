@@ -10,6 +10,13 @@ on:
         description: "Save the rewritten articles (otherwise only report)"
         type: boolean
         default: false
+      match:
+        description: "Only articles whose Persian title contains this text (empty = all that day)"
+        default: ""
+      edit_telegram:
+        description: "Also edit the already-sent Telegram post"
+        type: boolean
+        default: false
       voice:
         description: "Writing voice (babak or default)"
         default: "babak"
@@ -29,6 +36,10 @@ jobs:
         env:
           REWRITE_DATE: ${{ inputs.date }}
           APPLY: ${{ inputs.apply }}
+          REWRITE_MATCH: ${{ inputs.match }}
+          EDIT_TELEGRAM: ${{ inputs.edit_telegram }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}
           WRITER_VOICE: ${{ inputs.voice }}
           WRITER_MODEL: ${{ vars.WRITER_MODEL || 'claude-haiku-5-5' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

@@ -2,6 +2,8 @@
  * Rewrites already-published articles from one day (Dublin time) with the current writer
  * (WRITER_VOICE, WRITER_MODEL). Keeps slug, picture, category and Telegram post history.
  * DRY run by default; APPLY=true saves. REWRITE_DATE=YYYY-MM-DD (default: yesterday in Dublin).
+ * REWRITE_MATCH=text limits it to articles whose Persian title contains that text.
+ * EDIT_TELEGRAM=true (with APPLY) also edits the already-sent channel post to the new text.
  */
 import { writeFileSync } from "node:fs";
 import { adminDb } from "./lib/db";
@@ -9,6 +11,7 @@ import { envBool } from "./lib/env";
 import { extractArticleText } from "./lib/extract";
 import { cleanArticle, writeArticle, WRITER_MODEL } from "./lib/ai";
 import { refreshSite } from "./lib/revalidate";
+import { telegramNewsText } from "./lib/telegram-format";
 
 const dublinDate = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Dublin" }).format(d);
 
@@ -26,7 +29,11 @@ async function main() {
     .lt("published_at", new Date(to).toISOString())
     .order("published_at");
   if (error) throw error;
-  const rows = (data ?? []).filter((r) => dublinDate(new Date(r.published_at)) === date);
+  const match = process.env.REWRITE_MATCH?.trim();
+  const editTelegram = envBool("EDIT_TELEGRAM", false);
+  const rows = (data ?? []).filter(
+    (r) => dublinDate(new Date(r.published_at)) === date && (!match || String(r.title_fa).includes(match) || String(r.source_title ?? "").includes(match)),
+  );
   console.log(`${rows.length} articles published on ${date} (Dublin). Voice: ${process.env.WRITER_VOICE ?? "default"}, model: ${WRITER_MODEL}. ${apply ? "APPLY" : "dry run"}`);
 
   // Backup of the old text, kept as a workflow artifact.
@@ -52,6 +59,7 @@ async function main() {
       continue;
     }
     console.log(`• ${r.slug}\n    before: ${r.title_fa}\n    after:  ${a.title_fa}`);
+    if (match) console.log(`  telegram before:\n${r.social?.telegram ?? ""}\n  telegram after:\n${a.telegram_post}\n  body after:\n${a.body_fa}\n`);
     if (apply) {
       const { error: e } = await db
         .from("articles")
@@ -68,11 +76,33 @@ async function main() {
         console.warn("  save failed:", e.message);
         continue;
       }
+      if (editTelegram && r.telegram_message_id) await editChannelPost(r.telegram_message_id, a.telegram_post, r.slug);
     }
     done++;
   }
   console.log(`\n${done} of ${rows.length} articles ${apply ? "rewritten" : "would be rewritten"}.`);
   if (apply && done) await refreshSite();
+}
+
+async function editChannelPost(messageId: number, body: string, slug: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const channel = process.env.TELEGRAM_CHANNEL_ID;
+  const site = process.env.SITE_URL;
+  if (!token || !channel || !site) return console.warn("  Telegram not configured; post not edited.");
+  const link = `${site}/news/${slug}`;
+  const res = await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: channel,
+      message_id: messageId,
+      text: telegramNewsText(body, link),
+      parse_mode: "HTML",
+      link_preview_options: { url: link, prefer_large_media: true },
+    }),
+  });
+  const json = (await res.json()) as { ok: boolean; description?: string };
+  console.log(json.ok ? `  ✓ Telegram post ${messageId} edited` : `  ✗ Telegram edit failed: ${json.description}`);
 }
 
 main().then(() => process.exit(0)).catch((e) => {

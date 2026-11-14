@@ -18,6 +18,9 @@ on:
       source_date:
         description: "When the source published it (YYYY-MM-DD, empty = today)"
         default: ""
+      editor_note:
+        description: "Extra note for the writer (optional)"
+        default: ""
       apply:
         description: "Publish (otherwise only show the text)"
         type: boolean
@@ -55,6 +58,7 @@ jobs:
           RELEVANCE: ${{ inputs.relevance }}
           SOURCE_DATE: ${{ inputs.source_date }}
           APPLY: ${{ inputs.apply }}
+          EDITOR_NOTE: ${{ inputs.editor_note }}
       - name: Picture
         if: ${{ inputs.apply }}
         run: npx tsx scripts/add-images.ts

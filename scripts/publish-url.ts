@@ -26,6 +26,10 @@ async function main() {
   const text = await extractArticleText(url);
   if (!text) throw new Error("Could not read the page.");
   const title = text.split("\n")[0].slice(0, 200);
+  // An older story covered now: make sure "this month", "on Monday" etc. are written as real dates.
+  const today = new Date().toISOString().slice(0, 10);
+  const note = process.env.EDITOR_NOTE?.trim();
+  const dated = `[Editor note, not part of the source: the source was published on ${sourceDate.slice(0, 10)}; today is ${today}. Write every time reference relative to today, e.g. «در ماه مارس ۲۰۲۶» instead of «این ماه» or «روز دوشنبه».${note ? " " + note : ""}]\n\n${text}`;
   const mode = source?.kind === "open" ? "translation" : "report";
   const w = await writeArticle({
     model: WRITER_MODEL,
@@ -33,7 +37,7 @@ async function main() {
     sourceName: source?.nameEn ?? new URL(url).hostname,
     title,
     publishedAt: new Date(sourceDate).toISOString(),
-    text,
+    text: sourceDate.slice(0, 10) === today && !note ? text : dated,
     light: category === "entertainment",
   });
   const a = w && (await cleanArticle(w));

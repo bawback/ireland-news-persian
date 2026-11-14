@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
 import Link from "next/link";
 import { GUIDES } from "@/content/guides";
+import { coverageOf, type Article } from "@/lib/types";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -35,11 +36,34 @@ const siteJsonLd = [
   },
 ];
 
+/**
+ * The big story at the top: the most important and most talked-about story of the last day,
+ * not simply the newest. Importance, relevance for immigrants and how many outlets reported it
+ * (the «خبر داغ» counter) count most; a picture and freshness help; older stories slowly fade.
+ */
+function pickLead(articles: Article[]): Article | undefined {
+  const now = Date.now();
+  const recent = articles.filter((a) => now - Date.parse(a.published_at) < 24 * 3600_000);
+  const pool = recent.length >= 3 ? recent : articles;
+  const score = (a: Article) => {
+    const hours = (now - Date.parse(a.published_at)) / 3600_000;
+    return (
+      a.importance * 2 +
+      a.immigrant_relevance * 1.5 +
+      Math.min(coverageOf(a), 6) * 1.5 +
+      (a.image_url ? 1 : 0) -
+      hours / 8
+    );
+  };
+  return [...pool].sort((x, y) => score(y) - score(x))[0];
+}
+
 export default async function HomePage() {
   "use cache";
   cacheLife("minutes");
   const [latest, immigrant] = await Promise.all([getLatest(30), getImmigrantHighlights(6)]);
-  const [lead, ...rest] = latest;
+  const lead = pickLead(latest);
+  const rest = latest.filter((a) => a !== lead);
   const side = rest.slice(0, 5);
   const grid = rest.slice(5);
 

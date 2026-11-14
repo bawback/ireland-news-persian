@@ -9,22 +9,21 @@ import { envInt, envOptional } from "./lib/env";
 import { AI_IMAGE_CREDIT, ImageServiceUnavailable, planImage, renderImage } from "./lib/images";
 import { refreshSite } from "./lib/revalidate";
 import { fixPersian } from "./lib/fa-fixes";
+import { findFreePhoto } from "./lib/free-photos";
 
 const BUCKET = "news-images";
 
 async function main() {
+  // Real photos with a free licence are tried first; the AI picture (fal.ai) is the fallback.
   const falKey = envOptional("FAL_KEY");
-  if (!falKey) {
-    console.log("FAL_KEY is not set yet; skipping images.");
-    return;
-  }
+  let aiAvailable = Boolean(falKey);
   const limit = envInt("IMAGES_PER_RUN", 8);
   const days = envInt("IMAGE_BACKFILL_DAYS", 7);
   const db = adminDb();
   const since = new Date(Date.now() - days * 24 * 3600_000).toISOString();
   const { data: articles, error } = await db
     .from("articles")
-    .select("id, slug, title_fa, summary_fa, category, tags")
+    .select("id, slug, title_fa, summary_fa, category, tags, source_title")
     .eq("status", "published")
     .is("image_url", null)
     .gte("published_at", since)
@@ -36,15 +35,25 @@ async function main() {
   let added = 0;
   for (const a of articles ?? []) {
     console.log(`→ ${a.title_fa}`);
-    const plan = await planImage(a);
-    if (!plan) continue;
-    let webp: Buffer | null;
-    try {
-      webp = await renderImage(plan.prompt, falKey);
-    } catch (e) {
-      if (!(e instanceof ImageServiceUnavailable)) throw e;
-      console.warn("Stopping: the fal.ai account needs a valid key or more credit.");
-      break;
+    let webp: Buffer | null = null;
+    let credit = AI_IMAGE_CREDIT;
+    let alt = "";
+    const photo = await findFreePhoto(a);
+    if (photo) {
+      webp = photo.webp;
+      credit = photo.credit;
+      alt = photo.alt_fa;
+    } else if (aiAvailable) {
+      const plan = await planImage(a);
+      if (!plan) continue;
+      try {
+        webp = await renderImage(plan.prompt, falKey!);
+      } catch (e) {
+        if (!(e instanceof ImageServiceUnavailable)) throw e;
+        console.warn("  the fal.ai account needs a valid key or more credit; only free photos from now on");
+        aiAvailable = false;
+      }
+      alt = plan.alt_fa;
     }
     if (!webp) continue;
 
@@ -61,7 +70,7 @@ async function main() {
     }
     const url = db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 
-    const update = { image_url: url, image_credit: AI_IMAGE_CREDIT, image_alt: fixPersian(plan.alt_fa.trim()) };
+    const update = { image_url: url, image_credit: credit, image_alt: fixPersian(alt.trim()) };
     let { error: updErr } = await db.from("articles").update(update).eq("id", a.id);
     if (updErr && /image_alt/.test(updErr.message)) {
       // The image_alt column has not been added yet: save without it.

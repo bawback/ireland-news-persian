@@ -11,7 +11,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import sharp from "sharp";
-import { CLASSIFIER_MODEL } from "./ai";
+import { CLASSIFIER_MODEL, repairMixedWords } from "./ai";
+import { applyWordFixes } from "./fa-fixes";
 import { IMAGE_HEIGHT, IMAGE_WIDTH } from "./images";
 
 const client = new Anthropic();
@@ -40,7 +41,7 @@ const CheckSchema = z.object({ fits: z.boolean(), score: z.number(), alt_fa: z.s
 const CHECK_SYSTEM = `You check a candidate news photo for a Persian news site about Ireland.
 Answer "fits": true only if the photo clearly shows the required subject (the right person, place or thing, not something else with a similar name), is a real, good-quality photo (not a map, logo, document, drawing, diagram, poster or screenshot), contains no large text overlays, and is suitable for a serious news site.
 "score": 0-10 for how well it works as the article's cover photo.
-"alt_fa": Persian description (8-20 words) of what the photo actually shows; do not start with «تصویر» or «عکس»; correct ZWNJ.`;
+"alt_fa": Persian description (8-20 words) of what the photo actually shows, in Persian letters only (names of places like Dublin = «دابلین»); do not start with «تصویر» or «عکس»; correct ZWNJ.`;
 
 type Candidate = { title: string; url: string; thumb: string; width: number; height: number; artist: string; license: string; description: string; page: string };
 
@@ -152,7 +153,9 @@ export async function findFreePhoto(a: { title_fa: string; summary_fa: string; c
     if (!v?.fits || v.score < 7) continue;
     const webp = await sharp(raw).resize(IMAGE_WIDTH, IMAGE_HEIGHT, { fit: "cover", position: sharp.strategy.attention }).webp({ quality: 82 }).toBuffer();
     console.log(`  ✓ photo: ${c.title} (${c.license}, score ${v.score})`);
-    return { webp, credit: `عکس: ${c.artist} / Wikimedia Commons، ${c.license}`, alt_fa: v.alt_fa, source: c.page };
+    // The small model sometimes mixes alphabets inside a word (e.g. Cyrillic); repair those.
+    const alt = applyWordFixes(v.alt_fa, await repairMixedWords([v.alt_fa]));
+    return { webp, credit: `عکس: ${c.artist} / Wikimedia Commons، ${c.license}`, alt_fa: alt, source: c.page };
   }
   return null;
 }

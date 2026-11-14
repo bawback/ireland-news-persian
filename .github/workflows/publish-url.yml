@@ -1,0 +1,69 @@
+name: Publish one story from a URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Article URL"
+        required: true
+      category:
+        description: "Category slug (ireland, entertainment, economy, ...)"
+        default: "ireland"
+      importance:
+        description: "Importance 1-5"
+        default: "3"
+      relevance:
+        description: "Relevance for immigrants 0-3"
+        default: "1"
+      source_date:
+        description: "When the source published it (YYYY-MM-DD, empty = today)"
+        default: ""
+      apply:
+        description: "Publish (otherwise only show the text)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: news-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SITE_URL: ${{ vars.SITE_URL }}
+      REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+      WRITER_VOICE: ${{ vars.WRITER_VOICE || 'babak' }}
+      WRITER_MODEL: ${{ vars.WRITER_MODEL || 'claude-haiku-5-5' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Write and publish
+        run: npx tsx scripts/publish-url.ts
+        env:
+          URL: ${{ inputs.url }}
+          CATEGORY: ${{ inputs.category }}
+          IMPORTANCE: ${{ inputs.importance }}
+          RELEVANCE: ${{ inputs.relevance }}
+          SOURCE_DATE: ${{ inputs.source_date }}
+          APPLY: ${{ inputs.apply }}
+      - name: Picture
+        if: ${{ inputs.apply }}
+        run: npx tsx scripts/add-images.ts
+        env:
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          IMAGES_PER_RUN: "3"
+      - name: Telegram
+        if: ${{ inputs.apply }}
+        run: npx tsx scripts/post-telegram.ts
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}

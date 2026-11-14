@@ -1,0 +1,75 @@
+/**
+ * Writes and publishes one article from a chosen URL (a story the editor asked for by hand).
+ *   URL=... SOURCE_ID=joe CATEGORY=entertainment IMPORTANCE=3 RELEVANCE=1 SOURCE_DATE=2026-03-30 APPLY=true
+ * Dry run unless APPLY=true. Pictures and the Telegram post are done by the usual scripts afterwards.
+ */
+import { adminDb } from "./lib/db";
+import { env, envBool } from "./lib/env";
+import { extractArticleText } from "./lib/extract";
+import { cleanArticle, writeArticle, WRITER_MODEL } from "./lib/ai";
+import { refreshSite } from "./lib/revalidate";
+import { SOURCES } from "./sources";
+
+async function main() {
+  const url = env("URL");
+  const apply = envBool("APPLY", false);
+  const source = SOURCES.find((s) => s.id === process.env.SOURCE_ID) ?? SOURCES.find((s) => url.includes(new URL(s.feed).hostname.replace(/^www\./, "")));
+  const category = process.env.CATEGORY?.trim() || "ireland";
+  const importance = Number(process.env.IMPORTANCE || 3);
+  const relevance = Number(process.env.RELEVANCE || 1);
+  const sourceDate = process.env.SOURCE_DATE?.trim() || new Date().toISOString();
+  const db = adminDb();
+
+  const { data: existing } = await db.from("articles").select("slug").eq("source_url", url).limit(1);
+  if (existing?.length) return console.log(`Already published: ${existing[0].slug}`);
+
+  const text = await extractArticleText(url);
+  if (!text) throw new Error("Could not read the page.");
+  const title = text.split("\n")[0].slice(0, 200);
+  const mode = source?.kind === "open" ? "translation" : "report";
+  const w = await writeArticle({
+    model: WRITER_MODEL,
+    mode,
+    sourceName: source?.nameEn ?? new URL(url).hostname,
+    title,
+    publishedAt: new Date(sourceDate).toISOString(),
+    text,
+    light: category === "entertainment",
+  });
+  const a = w && (await cleanArticle(w));
+  if (!a) throw new Error("Writer failed.");
+  console.log(`${a.title_fa}\n\n${a.summary_fa}\n\n${a.body_fa}\n\n--- Telegram ---\n${a.telegram_post}\n\nconfidence: ${a.confidence}; notes: ${a.notes_for_editor}`);
+  if (!apply) return console.log("\nDry run: nothing saved.");
+
+  const base = a.slug.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70) || "news";
+  const { data: clash } = await db.from("articles").select("id").eq("slug", base).limit(1);
+  const slug = clash?.length ? `${base}-${Date.now().toString(36)}` : base;
+  const { error } = await db.from("articles").insert({
+    slug,
+    title_fa: a.title_fa,
+    summary_fa: a.summary_fa,
+    body_fa: a.body_fa,
+    category,
+    tags: a.tags,
+    immigrant_relevance: relevance,
+    importance,
+    mode,
+    source_id: source?.id ?? "manual",
+    source_name: source?.name ?? new URL(url).hostname,
+    source_url: url,
+    source_title: title,
+    social: { telegram: a.telegram_post, x: a.x_post, instagram: a.instagram_caption, whatsapp: a.whatsapp_post },
+    confidence: a.confidence,
+    notes_for_editor: a.notes_for_editor,
+    status: "published",
+    published_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+  console.log(`\n✓ published: ${slug}`);
+  await refreshSite();
+}
+
+main().then(() => process.exit(0)).catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

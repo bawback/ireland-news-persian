@@ -18,6 +18,9 @@ on:
       source_date:
         description: "When the source published it (YYYY-MM-DD, empty = today)"
         default: ""
+      extra_urls:
+        description: "Background pages for context, space separated (optional)"
+        default: ""
       editor_note:
         description: "Extra note for the writer (optional)"
         default: ""
@@ -59,6 +62,7 @@ jobs:
           SOURCE_DATE: ${{ inputs.source_date }}
           APPLY: ${{ inputs.apply }}
           EDITOR_NOTE: ${{ inputs.editor_note }}
+          EXTRA_URLS: ${{ inputs.extra_urls }}
       - name: Picture
         if: ${{ inputs.apply }}
         run: npx tsx scripts/add-images.ts

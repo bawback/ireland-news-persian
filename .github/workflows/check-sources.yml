@@ -1,7 +1,11 @@
 name: Check sources
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      find:
+        description: "Print recent items whose title contains these words (optional)"
+        default: ""
   schedule:
     - cron: "0 7 * * 1" # every Monday morning
 
@@ -16,3 +20,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsx scripts/check-sources.ts
+        env:
+          FIND: ${{ github.event.inputs.find || '' }}

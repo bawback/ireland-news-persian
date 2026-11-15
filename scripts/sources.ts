@@ -45,6 +45,7 @@ export const SOURCES: Source[] = [
   // BreakingNews.ie RSS has not been updated since September 2026.
   // { id: "breakingnews", name: "بریکینگ‌نیوز", nameEn: "BreakingNews.ie", feed: "https://feeds.breakingnews.ie/bnireland", kind: "media", priority: 6, verify: true },
   { id: "independent", name: "آیریش ایندیپندنت", nameEn: "Irish Independent", feed: "https://www.independent.ie/irish-news/rss", kind: "media", priority: 7, verify: true },
+  { id: "irish-mirror", name: "آیریش میرر", nameEn: "Irish Mirror", feed: "https://www.irishmirror.ie/news/irish-news/?service=rss", kind: "media", priority: 5, verify: true },
   { id: "irish-times", name: "آیریش تایمز", nameEn: "The Irish Times", feed: "https://www.irishtimes.com/arc/outboundfeeds/feed-irish-news/?outputType=xml", kind: "media", priority: 8, verify: true },
   { id: "silicon-republic", name: "سیلیکون ریپابلیک", nameEn: "Silicon Republic", feed: "https://www.siliconrepublic.com/feed/", kind: "media", hint: "tech", priority: 5, verify: true },
   { id: "the42", name: "دِ فورتی‌تو", nameEn: "The42", feed: "https://www.the42.ie/feed/", kind: "media", hint: "sport", priority: 5, verify: true },

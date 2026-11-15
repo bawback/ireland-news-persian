@@ -6,7 +6,11 @@ async function main() {
   const results = await Promise.allSettled(
     SOURCES.map((s) => fetchFeed(s, 72)),
   );
+  // FIND=words prints matching recent items (title contains all words) with their URLs.
+  const find = (process.env.FIND ?? "").toLowerCase().split(/\s+/).filter(Boolean);
   results.forEach((r, i) => {
+    if (find.length && r.status === "fulfilled")
+      for (const it of r.value) if (find.every((w) => it.title.toLowerCase().includes(w))) console.log(`  FOUND ${it.title} | ${it.url}`);
     const s = SOURCES[i];
     if (r.status === "fulfilled")
       console.log(`✓ ${s.nameEn.padEnd(28)} ${r.value.length} items`);

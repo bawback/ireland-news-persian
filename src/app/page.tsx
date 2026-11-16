@@ -8,6 +8,8 @@ import { JsonLd } from "@/components/JsonLd";
 import Link from "next/link";
 import { GUIDES } from "@/content/guides";
 import { coverageOf, type Article } from "@/lib/types";
+import { getWeatherAlerts } from "@/lib/weather-alerts";
+import { WeatherBanner } from "@/components/WeatherBanner";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -69,7 +71,7 @@ function pickLead(articles: Article[]): Article | undefined {
 export default async function HomePage() {
   "use cache";
   cacheLife("minutes");
-  const [latest, immigrant] = await Promise.all([getLatest(80), getImmigrantHighlights(6)]);
+  const [latest, immigrant, weather] = await Promise.all([getLatest(80), getImmigrantHighlights(6), getWeatherAlerts()]);
   const lead = pickLead(latest);
   const rest = latest.filter((a) => a !== lead);
   const side = rest.slice(0, 5);
@@ -82,6 +84,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-12">
       <JsonLd data={siteJsonLd} />
+      <WeatherBanner alerts={weather} />
       <h1 className="sr-only">{`${SITE.name}: خبرهای امروز ایرلند و ایرلند شمالی به زبان فارسی`}</h1>
       <section className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">

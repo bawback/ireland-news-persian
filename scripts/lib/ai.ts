@@ -554,3 +554,43 @@ export function applyNameStyle(text: string, names: { persian: string; english: 
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// 5) Weather warnings: faithful Persian translation of an official warning
+// ---------------------------------------------------------------------------
+
+const WarningSchema = z.object({ title_fa: z.string(), body_fa: z.string() });
+
+const WARNING_SYSTEM = `You translate official weather warnings from Met Éireann (Ireland) or the Met Office (Northern Ireland) into fluent, natural Persian for Iranians living in Ireland.
+- Translate faithfully and completely. Do not add, drop, soften or exaggerate anything: the warning text is official and its meaning must not change.
+- "title_fa": a short Persian headline (max ~12 words) saying the warning level, what weather and where, e.g. «هشدار نارنجی باد شدید برای دابلین و ویکلو».
+- "body_fa": the full warning text in Persian, as short clear paragraphs. Keep every impact listed (e.g. falling trees, flooding, travel disruption, power cuts).
+- County and city names in Persian: Dublin «دابلین», Cork «کورک», Galway «گالوی», Kerry «کری», Limerick «لیمریک», Clare «کلر», Mayo «مایو», Donegal «دانگال», Wexford «وکسفورد», Waterford «واترفورد», Wicklow «ویکلو», Northern Ireland «ایرلند شمالی», Belfast «بلفاست». Less-known place names may stay in English letters.
+- Speeds and amounts: Persian digits with units in Persian, e.g. «۱۰۰ کیلومتر در ساعت», «۵۰ میلی‌متر».
+- Do not repeat the start and end times as a separate line; they are shown separately. Times that are part of a sentence may be kept.
+- Plain text only: no Markdown, no emoji, no hashtags.`;
+
+/** Translates one warning. Returns null on failure, so the alert can still go out with its fixed Persian lines. */
+export async function translateWarning(w: { headline: string; description: string; levelFa: string; areasFa: string }): Promise<{ title_fa: string; body_fa: string } | null> {
+  try {
+    const res = await client.messages.parse({
+      model: WRITER_MODEL,
+      max_tokens: 3000,
+      output_config: { effort: "low", format: zodOutputFormat(WarningSchema) },
+      system: WARNING_SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: JSON.stringify({ level_in_persian: w.levelFa, areas_in_persian: w.areasFa, headline: w.headline, text: w.description }),
+        },
+      ],
+    });
+    const out = res.parsed_output;
+    if (!out?.title_fa.trim() || !out.body_fa.trim()) return null;
+    const fixes = await repairMixedWords([out.title_fa, out.body_fa]);
+    return { title_fa: fixPersian(applyWordFixes(out.title_fa.trim(), fixes)), body_fa: fixPersian(applyWordFixes(out.body_fa.trim(), fixes)) };
+  } catch (e) {
+    console.warn("  warning translation failed:", String(e).slice(0, 300));
+    return null;
+  }
+}

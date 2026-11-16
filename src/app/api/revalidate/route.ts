@@ -7,5 +7,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: false }, { status: 401 });
   }
   revalidateTag("articles", "max");
+  revalidateTag("weather", "max");
   return Response.json({ ok: true });
 }

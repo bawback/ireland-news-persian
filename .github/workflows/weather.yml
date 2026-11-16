@@ -1,0 +1,43 @@
+name: Weather alerts
+
+on:
+  # Runs every hour inside the news pipeline. This workflow is for the night runs
+  # (started by pg_cron, see supabase/weather.sql) and for running it by hand.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only show the posts in the log, do not post or save"
+        type: boolean
+        default: false
+      force_morning:
+        description: "Send the morning 'today's warnings' post now"
+        type: boolean
+        default: false
+
+concurrency:
+  group: news-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/weather-alerts.ts
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          FORCE_MORNING: ${{ github.event.inputs.force_morning || 'false' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}
+          WRITER_MODEL: ${{ vars.WRITER_MODEL || 'claude-haiku-5-5' }}

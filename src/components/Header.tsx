@@ -45,6 +45,12 @@ export async function Header() {
         >
           راهنماها
         </Link>
+        <Link
+          href="/weather"
+          className="shrink-0 rounded-full px-3 py-1.5 font-medium text-muted transition hover:bg-brand-soft hover:text-brand"
+        >
+          هواشناسی
+        </Link>
       </nav>
     </header>
   );

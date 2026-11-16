@@ -20,6 +20,19 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # First, so a problem in the news steps never delays a storm warning.
+      - name: Severe weather alerts (Met Éireann + Met Office NI)
+        continue-on-error: true
+        run: npx tsx scripts/weather-alerts.ts
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}
+          WRITER_MODEL: ${{ vars.WRITER_MODEL || 'claude-haiku-5-5' }}
       - name: Collect, classify and write news
         run: npx tsx scripts/ingest.ts
         env:

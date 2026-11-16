@@ -10,6 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "ingest": "tsx --env-file-if-exists=.env.local scripts/ingest.ts",
+    "weather": "tsx --env-file-if-exists=.env.local scripts/weather-alerts.ts",
     "post:telegram": "tsx --env-file-if-exists=.env.local scripts/post-telegram.ts",
     "check-sources": "tsx scripts/check-sources.ts",
     "try": "tsx --env-file-if-exists=.env.local scripts/try-article.ts"

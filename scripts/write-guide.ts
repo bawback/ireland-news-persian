@@ -70,8 +70,8 @@ function track(step: string, u: UsageLike) {
 async function research(t: SeoTopic): Promise<{ notes: string; urls: Set<string> }> {
   const tools = [
     // Cost control: every fetched page is re-read on each later step, so keep pages short and few.
-    { type: "web_search_20260209", name: "web_search", max_uses: 6, allowed_domains: DOMAINS },
-    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 8, max_content_tokens: 10000, allowed_domains: DOMAINS },
+    { type: "web_search_20260209", name: "web_search", max_uses: 8, allowed_domains: DOMAINS },
+    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 12, max_content_tokens: 8000, allowed_domains: DOMAINS },
   ] as unknown as Anthropic.Messages.ToolUnion[];
   const messages: Anthropic.Messages.MessageParam[] = [
     {
@@ -84,6 +84,10 @@ What the guide should explain: ${t.angle}
 Today's date: ${today()}
 
 Use only official Irish sources (search and fetch the actual pages; prefer citizensinformation.ie, irishimmigration.ie, gov.ie and the responsible public body). Read the pages, don't rely on memory.
+How to research (you have a limited number of fetches, use them well):
+- Search first. Fetch ONLY URLs that appeared in your search results; never type or guess a URL (guessed URLs are refused and waste a fetch).
+- Fetch specific topic pages (the page that actually explains the rule, fee or process), not section index or menu pages.
+- Cover each part of the topic with at least one fetched official page, and aim for 6 or more different pages in total.
 
 Return research notes in English:
 - Every fact (rules, steps, documents, fees, amounts, thresholds, deadlines, processing times, dates of changes) with the URL it came from in square brackets.

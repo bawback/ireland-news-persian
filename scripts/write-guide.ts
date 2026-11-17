@@ -97,6 +97,10 @@ Return research notes in English:
   for (let i = 0; i < 4; i++) {
     const res = await client.messages.create({ model: MODEL, max_tokens: 16000, tools, messages });
     track("research", res.usage);
+    const kinds = res.content.map((b) => b.type).join(",");
+    const errors = JSON.stringify(res.content).match(/"error_code":"[a-z_]+"/g) ?? [];
+    console.log(`  research step ${i + 1}: stop=${res.stop_reason}, fetches=${(res.usage as { server_tool_use?: { web_fetch_requests?: number } }).server_tool_use?.web_fetch_requests ?? "?"}, errors=${errors.join(" ") || "none"}`);
+    if (process.env.DEBUG_GUIDE) console.log(kinds);
     for (const m of JSON.stringify(res.content).matchAll(/https?:\/\/[^"\\\s)]+/g)) urls.add(m[0].replace(/[.,]+$/, ""));
     notes += res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === "text").map((b) => b.text).join("\n");
     if (res.stop_reason === "pause_turn" && cost < RESEARCH_BUDGET_USD) {
@@ -186,6 +190,7 @@ async function main() {
 
   const { notes, urls } = await research(topic);
   console.log(`Research: ${notes.length} chars, ${urls.size} URLs seen`);
+  console.log(notes.slice(-3000));
   if (notes.length < 1500) throw new Error("Research too thin; not publishing.");
 
   const others = [...STATIC_GUIDES, ...saved.filter((g) => g.topic !== topic.id).map((g) => ({ slug: g.slug, title: g.title }))];

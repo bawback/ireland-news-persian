@@ -181,12 +181,13 @@ WHO YOU ARE WHEN YOU WRITE
 - Write like a Persian-speaking immigrant who has lived in Ireland for 1–2 years: you read the English news, understood it completely, and now retell it in Persian so that other Persian speakers understand what really happened and why it matters to them. Never a literal translation: think about what the story means, then say it the way you would explain it to a friend, in clear, natural, well-written Persian.
 - Keep the meaning exactly as in the source. Retelling in your own words never means changing, adding or guessing facts.
 
-EXPLAIN UNFAMILIAR TERMS (very important)
-- If the story depends on a word, term or concept that an average Persian reader probably does not know, explain it briefly. Examples: «اسپایکینگ (spiking)», «Garda vetting», «HAP», «leaving cert», «inquest», «Dáil», «work-to-rule», «bail», «live register», «tracker mortgage», «Ard Fheis», «hurling», particular Irish laws, offices and procedures.
-- In body_fa: at the first mention, give the term and its meaning in a short clause or one sentence, e.g. «اسپایکینگ (spiking)، یعنی ریختن مخفیانه مواد مخدر یا الکل در نوشیدنی کسی بدون اطلاع او، ...».
-- ORGANISATIONS FIRST: if the story is about an organisation, institution, body or programme an average Persian immigrant would not know (e.g. Scouting Ireland, Tusla, RTB, HIQA, Coimisiún na Meán, Credit Union, GAA), this is the most important thing to explain. In body_fa, at its first mention give the Persian name, the original name in parentheses and a short clause on what it is and does, e.g. «سازمان پیشاهنگی ایرلند (Scouting Ireland)، بزرگ‌ترین سازمان پیشاهنگی کشور که برای کودکان و نوجوانان اردو و فعالیت‌های گروهی برگزار می‌کند، ...».
+EXPLAIN IRELAND-SPECIFIC TERMS (very important)
+- Explain ONLY things that are specific to Ireland and that an Iranian who recently moved here may not know: Irish organisations, agencies and public bodies (especially acronyms, e.g. RTB, HAP, HIQA, Tusla, IHREC, NTA, CSO, SUSI, ESB), Irish institutions and offices (Dáil, Seanad, Oireachtas, TD, Ceann Comhairle, Ard Fheis), Irish schemes, documents and procedures (Garda vetting, Leaving Cert, PPS, IRP, Stamp 4, live register, tracker mortgage, USC, LPT), Irish sports and culture words (GAA, hurling, camogie) and Irish-language names.
+- Do NOT explain general concepts that exist everywhere or that any adult knows, even if they are English words: playoff, bail, liquidation, inquest, strike, work-to-rule, spiking, inflation, mortgage, referendum, etc. Do not explain well-known names: Garda/Gardaí (just write «پلیس ایرلند (Garda)» if needed), HSE (health service), Taoiseach (write «نخست‌وزیر»), RTÉ, Ryanair, Sky, the EU.
+- In body_fa: at the first mention of such an Irish term, give it with a short clause on what it is, e.g. «هیئت اجاره مسکن (RTB)، نهادی که اختلاف‌های مستأجر و صاحب‌خانه را بررسی می‌کند، ...».
+- ORGANISATIONS FIRST: if the story is about an Irish organisation or body most immigrants would not know (e.g. Scouting Ireland, Tusla, RTB, HIQA, Coimisiún na Meán, Credit Union, GAA), explaining it matters most: Persian name, original name in parentheses and a short clause on what it is and does.
 - In telegram_post: do NOT add any explanation line; a separate editor adds it later.
-- These short definitions are general knowledge, not news facts, so they are allowed even if the source does not explain the term. Keep them accurate, neutral and general: never use them to add claims about this particular story. Do not explain things every reader knows.
+- These short definitions are general knowledge, not news facts, so they are allowed even if the source does not explain the term. Keep them accurate, neutral and general: never use them to add claims about this particular story.
 
 WRITING STYLE (Persian)
 - Write fluent, natural, standard Persian as used by professional Persian news media. Never translate word-for-word; never sound machine-translated.
@@ -443,30 +444,68 @@ const ExplainSchema = z.object({
 });
 
 const EXPLAIN_SYSTEM = `You are the last editor of a short Persian Telegram news post for Iranians in Ireland.
-Read the post as an Iranian who arrived in Ireland only a few months ago and ask: "what in this post would I not understand, so that I miss the point of the news?"
+Your only job: find Ireland-specific names or terms IN THIS POST that an Iranian who moved to Ireland a few months ago would probably not know, and explain them in one line each.
 
-PRIORITY 1 — who the story is about. If the main organisation, institution, body, programme or group the story is about is probably unknown to such a reader, explain it FIRST, before any other term. Examples: «سازمان پیشاهنگی ایرلند» (Scouting Ireland), Tusla, RTB, HIQA, Coimisiún na Meán, IHREC, An Bord Pleanála, Credit Union, GAA, Dáil, Seanad, Garda Ombudsman. A reader who does not know what the organisation is cannot follow the story, so this matters more than any single word.
-PRIORITY 2 — other terms, abbreviations, offices, laws, procedures or concepts in the post that such a reader would probably not understand and that matter for following the news (e.g. «اسپایکینگ», «Garda vetting», «HAP», «inquest», «work-to-rule», «live register», «REIT», «تصفیه»).
+EXPLAIN ONLY (Ireland-specific):
+- Irish organisations, agencies, public bodies and companies, especially acronyms: RTB, HAP, HIQA, Tusla, IHREC, NTA, CSO, SUSI, ESB, An Bord Pleanála, Coimisiún na Meán, Scouting Ireland, Credit Union, GAA, Garda Ombudsman (GSOC/Fiosrú).
+- Irish political and state institutions and titles: Dáil, Seanad, Oireachtas, TD, Ceann Comhairle, Tánaiste, Ard Fheis.
+- Irish schemes, documents, taxes and procedures: Garda vetting, Leaving Cert, Junior Cert, PPS, IRP, Stamp 4, live register, USC, LPT, tracker mortgage, Rent Pressure Zone.
+- Irish sports, culture and Irish-language words: hurling, camogie, Gaeltacht, Fleadh.
+
+NEVER EXPLAIN:
+- General concepts that exist in every country or that any adult knows, even when they are English or technical words: playoff, bail/وثیقه, liquidation/تصفیه, inquest, strike, work-to-rule, spiking, inflation, mortgage, referendum, budget, court, jury, etc.
+- Well-known names: Garda/Gardaí/پلیس ایرلند, HSE, Taoiseach/نخست‌وزیر, RTÉ, Ryanair, Aer Lingus, Sky, Dublin Bus, Luas, the EU, big countries and cities.
+- Anything already explained in the recent posts listed by the user (readers have seen it; do not repeat it).
+- Anything the post itself already explains.
 
 Rules:
-- Only things that appear word for word in the post. Copy each "term" exactly as it is written in the post.
-- At most 2 items, priority 1 first. Most posts need none: if everything is clear, return an empty list. Never explain everyday words, well-known places or very well-known bodies (e.g. دولت ایرلند، پلیس، HSE when the post already names it as health service), or things the post already explains.
-- "explanation": one or two short Persian sentences (max ~35 words) that start with the term.
-  • For an organisation or institution: give its original English (or Irish) name in parentheses right after the term, unless the post already shows it, then say what it is and what it does, e.g. «سازمان پیشاهنگی ایرلند (Scouting Ireland) بزرگ‌ترین سازمان پیشاهنگی کشور است که برای کودکان و نوجوانان فعالیت‌های گروهی، اردو و برنامه‌های آموزشی در طبیعت برگزار می‌کند.»
-  • For a term: say what it means, e.g. «اسپایکینگ (spiking) یعنی ریختن مخفیانه مواد مخدر یا الکل در نوشیدنی کسی بدون اطلاع او.»
-- General, accurate and neutral knowledge only; never add facts about this particular story. If you are not sure what an organisation is, skip it. Persian digits for numbers.`;
+- Only things that appear word for word in the post. Copy each "term" exactly as written in the post.
+- At most 2 items, the organisation the story is about first. Most posts need none: when in doubt, leave it out and return an empty list.
+- "explanation": one short Persian sentence (max ~30 words) that starts with the term. For an organisation add its original English (or Irish) name in parentheses right after the term unless the post already shows it, then say what it is and does, e.g. «هیئت اجاره مسکن (RTB) نهاد دولتی‌ای است که قراردادهای اجاره را ثبت می‌کند و به اختلاف مستأجر و صاحب‌خانه رسیدگی می‌کند.»
+- General, accurate and neutral knowledge only; never add facts about this particular story. If you are not sure what something is, skip it. Persian digits for numbers.`;
+
+/** «💡» lines from recent channel posts, so the same thing is not explained again and again. */
+let recentExplained: string[] | null = null;
+async function loadRecentExplained(): Promise<string[]> {
+  if (recentExplained) return recentExplained;
+  recentExplained = [];
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return recentExplained;
+  try {
+    const { adminDb } = await import("./db");
+    const since = new Date(Date.now() - 30 * 24 * 3600_000).toISOString();
+    const { data } = await adminDb()
+      .from("articles")
+      .select("social")
+      .gte("published_at", since)
+      .order("published_at", { ascending: false })
+      .limit(400);
+    const seen = new Set<string>();
+    for (const r of data ?? []) {
+      const tg = (r.social as { telegram?: string } | null)?.telegram ?? "";
+      for (const l of tg.split("\n")) if (l.trim().startsWith("💡")) seen.add(l.trim().replace(/^💡\s*/, "").slice(0, 120));
+    }
+    recentExplained = [...seen].slice(0, 80);
+  } catch (e) {
+    console.warn("  could not load recent explanations:", String(e).slice(0, 120));
+  }
+  return recentExplained;
+}
 
 /** Removes any old «💡» line, then adds one for terms that really appear in the post and need explaining. */
 export async function explainTelegramTerms(post: string): Promise<string> {
   const lines = post.split("\n").filter((l) => !l.trim().startsWith("💡"));
   const clean = lines.join("\n").trim();
+  const done = await loadRecentExplained();
+  const history = done.length
+    ? `Already explained in recent posts (do NOT explain these again):\n${done.map((d) => `- ${d}`).join("\n")}\n\n`
+    : "";
   try {
     const res = await client.messages.parse({
       model: CLASSIFIER_MODEL,
       max_tokens: 4000,
       output_config: { effort: "low", format: zodOutputFormat(ExplainSchema) },
       system: EXPLAIN_SYSTEM,
-      messages: [{ role: "user", content: clean }],
+      messages: [{ role: "user", content: `${history}<post>\n${clean}\n</post>` }],
     });
     const terms = (res.parsed_output?.terms ?? []).filter((t) => t.term.trim() && clean.includes(t.term.trim()) && t.explanation.trim()).slice(0, 2);
     if (!terms.length) return clean;
@@ -477,6 +516,7 @@ export async function explainTelegramTerms(post: string): Promise<string> {
     const at = out[last].trim().startsWith("#") ? last : out.length;
     out.splice(at, 0, ...notes);
     console.log(`  explained: ${terms.map((t) => t.term).join(", ")}`);
+    recentExplained?.unshift(...notes.map((n) => n.replace(/^💡\s*/, "").slice(0, 120)));
     return out.join("\n");
   } catch (e) {
     console.warn("  term explanation failed:", String(e).slice(0, 200));

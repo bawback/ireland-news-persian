@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { SITE } from "@/lib/site";
 
-export const metadata: Metadata = { title: "درباره ما و شیوه کار" };
+export const metadata: Metadata = {
+  title: "درباره ما و شیوه کار",
+  description: "درباره «اخبار ایرلند به فارسی»: اخبار ایرلند از چه منابعی می‌آید، چطور به فارسی نوشته و بازبینی می‌شود و اصول تحریریه ما.",
+  alternates: { canonical: "/about" },
+};
 
 export default function AboutPage() {
   return (

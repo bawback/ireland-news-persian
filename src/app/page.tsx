@@ -1,7 +1,7 @@
 import { getImmigrantHighlights, getLatest } from "@/lib/articles";
 import { ArticleCard, CompactItem, LeadCard } from "@/components/ArticleCard";
 import { SectionTitle } from "@/components/SectionTitle";
-import { SITE } from "@/lib/site";
+import { LD_IDS, SITE, organizationLd } from "@/lib/site";
 import { cacheLife } from "next/cache";
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
@@ -9,31 +9,63 @@ import Link from "next/link";
 import { GUIDES } from "@/content/guides";
 import { coverageOf, type Article } from "@/lib/types";
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export const metadata: Metadata = {
+  title: { absolute: SITE.homeTitle },
+  description: SITE.description,
+  alternates: { canonical: "/" },
+  openGraph: { type: "website", url: "/", title: SITE.homeTitle, description: SITE.description },
+};
 
-const siteJsonLd = [
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: SITE.name,
-    alternateName: SITE.nameEn,
-    url: SITE.url,
-    inLanguage: "fa",
-    potentialAction: {
-      "@type": "SearchAction",
-      target: `${SITE.url}/search?q={search_term_string}`,
-      "query-input": "required name=search_term_string",
+const siteJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": LD_IDS.website,
+      name: SITE.name,
+      alternateName: SITE.alternateNames,
+      url: SITE.url,
+      description: SITE.description,
+      inLanguage: "fa",
+      publisher: { "@id": LD_IDS.org },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: { "@type": "EntryPoint", urlTemplate: `${SITE.url}/search?q={search_term_string}` },
+        "query-input": "required name=search_term_string",
+      },
     },
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "NewsMediaOrganization",
-    name: SITE.name,
-    alternateName: SITE.nameEn,
-    url: SITE.url,
-    logo: `${SITE.url}/brand/logo-1024.png`,
-    sameAs: [SITE.telegram, SITE.instagram, SITE.x].filter(Boolean),
-  },
+    organizationLd(),
+    {
+      "@type": "WebPage",
+      "@id": `${SITE.url}/#webpage`,
+      url: SITE.url,
+      name: SITE.homeTitle,
+      description: SITE.description,
+      inLanguage: "fa",
+      isPartOf: { "@id": LD_IDS.website },
+      about: [
+        { "@type": "Country", name: "Ireland", alternateName: "ایرلند", sameAs: "https://en.wikipedia.org/wiki/Republic_of_Ireland" },
+        { "@type": "Place", name: "Northern Ireland", alternateName: "ایرلند شمالی", sameAs: "https://en.wikipedia.org/wiki/Northern_Ireland" },
+      ],
+      publisher: { "@id": LD_IDS.org },
+    },
+  ],
+};
+
+/** Keyword links to the topic pages, shown in the "about" block at the bottom of the home page. */
+const TOPIC_LINKS: { href: string; text: string }[] = [
+  { href: "/category/ireland", text: "اخبار ایرلند امروز" },
+  { href: "/category/immigration", text: "اخبار مهاجرت ایرلند" },
+  { href: "/category/economy", text: "اخبار اقتصادی ایرلند" },
+  { href: "/category/housing", text: "اخبار مسکن و اجاره در ایرلند" },
+  { href: "/category/northern-ireland", text: "اخبار ایرلند شمالی" },
+  { href: "/category/politics", text: "اخبار سیاسی ایرلند" },
+  { href: "/category/law", text: "قوانین تازه ایرلند" },
+  { href: "/category/sport", text: "اخبار ورزشی ایرلند" },
+  { href: "/category/culture", text: "اخبار فرهنگی ایرلند" },
+  { href: "/category/community", text: "اخبار ایرانیان ایرلند" },
+  { href: "/guides", text: "راهنمای زندگی و مهاجرت به ایرلند" },
+  { href: "/news", text: "آرشیو همه اخبار ایرلند" },
 ];
 
 /** Date (YYYY-MM-DD) and hour in Dublin for a moment in time. */
@@ -82,18 +114,23 @@ export default async function HomePage() {
   return (
     <div className="space-y-12">
       <JsonLd data={siteJsonLd} />
-      <h1 className="sr-only">{`${SITE.name}: خبرهای امروز ایرلند و ایرلند شمالی به زبان فارسی`}</h1>
-      <section className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <LeadCard a={lead} />
-        </div>
-        <aside className="rounded-2xl border border-line bg-surface p-5">
-          <h2 className="mb-1 font-black">تازه‌ترین‌ها</h2>
-          {side.map((a) => (
-            <CompactItem key={a.id} a={a} />
-          ))}
-        </aside>
-      </section>
+      <div className="space-y-4">
+        <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h1 className="text-xl font-black sm:text-2xl">اخبار ایرلند به فارسی</h1>
+          <p className="text-sm text-muted">تازه‌ترین اخبار امروز ایرلند، دابلین و ایرلند شمالی از منابع معتبر</p>
+        </header>
+        <section className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <LeadCard a={lead} />
+          </div>
+          <aside className="rounded-2xl border border-line bg-surface p-5">
+            <h2 className="mb-1 font-black">تازه‌ترین‌ها</h2>
+            {side.map((a) => (
+              <CompactItem key={a.id} a={a} />
+            ))}
+          </aside>
+        </section>
+      </div>
 
       {immigrant.length > 0 && (
         <section className="rounded-2xl bg-accent-soft p-5 sm:p-7">
@@ -124,7 +161,7 @@ export default async function HomePage() {
 
       {grid.length > 0 && (
         <section>
-          <SectionTitle title="همه خبرها" />
+          <SectionTitle title="همه اخبار ایرلند" href="/news" />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {grid.map((a) => (
               <ArticleCard key={a.id} a={a} />
@@ -132,6 +169,25 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      <section className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
+        <h2 className="text-xl leading-9 font-black">اخبار ایرلند به زبان فارسی، از منابع معتبر</h2>
+        <p className="mt-3 leading-8 text-muted">
+          «{SITE.name}» هر روز اخبار ایرلند و ایرلند شمالی را از منابع رسمی و رسانه‌های معتبر ایرلندی جمع می‌کند و به
+          فارسی روان و دقیق منتشر می‌کند؛ از سیاست و اقتصاد، بازار کار و مسکن تا ورزش و فرهنگ. تمرکز ویژه ما بر خبرهایی
+          است که برای مهاجران و ایرانیان مقیم ایرلند مهم است: ویزا و اقامت، قوانین تازه، هزینه زندگی و حقوق کار. منبع هر
+          خبر زیر همان خبر آمده است.
+        </p>
+        <ul className="mt-5 flex flex-wrap gap-2 text-sm">
+          {TOPIC_LINKS.map((t) => (
+            <li key={t.href}>
+              <Link href={t.href} className="inline-block rounded-full bg-brand-soft px-3 py-1.5 font-semibold text-brand hover:opacity-80">
+                {t.text}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {SITE.telegram && (
         <section className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-surface p-8 text-center">

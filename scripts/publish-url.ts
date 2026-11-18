@@ -78,7 +78,7 @@ async function main() {
   });
   if (error) throw error;
   console.log(`\n✓ published: ${slug}`);
-  await refreshSite();
+  await refreshSite([`/news/${slug}`, `/category/${category}`]);
 }
 
 main().then(() => process.exit(0)).catch((e) => {

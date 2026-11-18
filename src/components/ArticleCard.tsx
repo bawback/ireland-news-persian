@@ -4,17 +4,19 @@ import { categoryName } from "@/lib/categories";
 import { relativeFa } from "@/lib/dates";
 import { BidiText } from "./BidiText";
 
-function Cover({ a, className }: { a: Article; className: string }) {
+function Cover({ a, className, priority = false }: { a: Article; className: string; priority?: boolean }) {
   if (!a.image_url) return null;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={a.image_url}
-      alt={a.image_alt ?? ""}
+      alt={a.image_alt || a.title_fa}
       width={1200}
       height={675}
-      loading="lazy"
-      decoding="async"
+      // The lead picture is usually the largest thing on the home page (LCP), so it loads first.
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "auto"}
+      decoding={priority ? "sync" : "async"}
       className={`h-auto w-full max-w-full object-cover ${className}`}
     />
   );
@@ -39,7 +41,7 @@ export function LeadCard({ a }: { a: Article }) {
       href={`/news/${a.slug}`}
       className="group block rounded-2xl border border-line bg-surface p-6 shadow-sm transition hover:shadow-md sm:p-8"
     >
-      <Cover a={a} className="mb-5 block aspect-[16/9] rounded-xl" />
+      <Cover a={a} priority className="mb-5 block aspect-[16/9] rounded-xl" />
       <Meta a={a} />
       <h2 className="mt-4 text-2xl leading-[1.6] font-black group-hover:text-brand sm:text-[2rem]">
         <BidiText text={a.title_fa} />

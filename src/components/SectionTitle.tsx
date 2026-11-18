@@ -9,7 +9,7 @@ export function SectionTitle({ title, href }: { title: string; href?: string }) 
       </h2>
       {href && (
         <Link href={href} className="text-sm font-semibold text-brand hover:underline">
-          همه ←
+          همه<span className="sr-only"> {title}</span> ←
         </Link>
       )}
     </div>

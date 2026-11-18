@@ -236,6 +236,7 @@ async function main() {
   console.log(`${bestByStory.size} distinct stories, writing ${chosen.length}\n`);
 
   let written = 0;
+  const publishedPaths: string[] = [];
   for (const { it, c, s, updateOf } of chosen) {
     console.log(`→ [${s.nameEn}] ${it.title}`);
     const fullText = (await extractArticleText(it.url)) ?? it.content ?? "";
@@ -284,7 +285,7 @@ async function main() {
         status,
         published_at: status === "published" ? now : null,
       })
-      .select("id")
+      .select("id, slug")
       .single();
     if (error) {
       console.error("  insert failed:", error.message);
@@ -294,11 +295,12 @@ async function main() {
     const others = (sameKeyCount.get(c.story_key) ?? 1) - 1;
     if (others > 0) await addCoverage(db, inserted.id, "", others);
     written++;
+    if (status === "published") publishedPaths.push(`/news/${inserted.slug}`, `/category/${c.category}`);
     console.log(`  ✓ ${status}: ${article.title_fa}`);
   }
 
   // Tell the website to refresh.
-  if (written) await refreshSite();
+  if (written) await refreshSite(publishedPaths);
   console.log(`\nDone: ${written} articles written.`);
 }
 

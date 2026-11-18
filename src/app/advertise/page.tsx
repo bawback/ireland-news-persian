@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { SITE } from "@/lib/site";
 
-export const metadata: Metadata = { title: "تبلیغ در اخبار ایرلند به فارسی" };
+export const metadata: Metadata = {
+  title: "تبلیغ در اخبار ایرلند به فارسی",
+  description: "تبلیغ کسب‌وکار شما برای فارسی‌زبانان و ایرانیان ایرلند در وب‌سایت و کانال‌های «اخبار ایرلند به فارسی».",
+  alternates: { canonical: "/advertise" },
+};
 
 const packages = [
   { name: "معرفی در شبکه‌های اجتماعی", items: ["یک پست اختصاصی در تلگرام و اینستاگرام", "لینک به وب‌سایت یا صفحه شما"] },

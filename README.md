@@ -53,3 +53,14 @@ npm run dev
 | `npm run ingest` | یک بار اجرای موتور خبر |
 | `npm run post:telegram` | ارسال خبرهای منتشرشده به تلگرام |
 | `npm test` / `npm run typecheck` / `npm run lint` | آزمون‌ها و بررسی کد |
+
+## سئو (موتورهای جستجو)
+
+کارهایی که در کد انجام شده: عنوان و توضیح صفحه اصلی با عبارت‌های «اخبار ایرلند»، «اخبار ایرلند فارسی» و «ایرلند»؛ عنوان جدا برای هر دسته (مثلاً «اخبار مهاجرت ایرلند»)؛ داده ساختاریافته (`NewsMediaOrganization`، `WebSite`، `NewsArticle`، `BreadcrumbList`، `CollectionPage`)؛ نقشه سایت کامل و نقشه Google News؛ آرشیو صفحه‌بندی‌شده (`/news` و `/category/<slug>/page/<n>`)؛ پاسخ ۴۰۴ واقعی برای صفحه‌های ناموجود؛ و ارسال خودکار نشانی خبرهای تازه به IndexNow (Bing و Yandex) بعد از هر انتشار.
+
+کارهای یک‌باره بیرون از کد:
+
+1. **Google Search Console**: سایت را (ترجیحاً به‌صورت Domain property) اضافه و تأیید کنید، یا کد تأیید را در Vercel در `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` بگذارید. بعد در بخش Sitemaps این دو را ثبت کنید: `sitemap.xml` و `news-sitemap.xml`. برای صفحه اصلی و چند دسته مهم «Request indexing» بزنید.
+2. **Bing Webmaster Tools**: سایت را از Search Console وارد (Import) کنید یا کد را در `NEXT_PUBLIC_BING_SITE_VERIFICATION` بگذارید. IndexNow خودکار کار می‌کند و کلیدش در `/indexnow-key.txt` است.
+3. **Google Publisher Center**: نشریه را با نام «اخبار ایرلند به فارسی» ثبت کنید تا شانس دیده شدن در Google News بیشتر شود.
+4. **لینک از بیرون**: لینک سایت را در بیو کانال تلگرام، اینستاگرام، ایکس و صفحه‌های گروه‌های ایرانیان ایرلند بگذارید؛ لینک از سایت‌های دیگر مهم‌ترین عامل بیرونی رتبه است.

@@ -455,8 +455,11 @@ EXPLAIN ONLY (Ireland-specific):
 NEVER EXPLAIN:
 - General concepts that exist in every country or that any adult knows, even when they are English or technical words: playoff, bail/وثیقه, liquidation/تصفیه, inquest, strike, work-to-rule, spiking, inflation, mortgage, referendum, budget, court, jury, etc.
 - Well-known names: Garda/Gardaí/پلیس ایرلند, HSE, Taoiseach/نخست‌وزیر, RTÉ, Ryanair, Aer Lingus, Sky, Dublin Bus, Luas, the EU, big countries and cities.
+- People (players, politicians, artists), places (cities, towns, streets, squares, airports, stadiums, venues, cinemas, shops, restaurants), courts and police forces, events, films, brands and foreign organisations. Only Irish organisations, institutions, schemes and terms from the list above qualify.
+- Medical, scientific, legal or sports terms that are the same everywhere (HPV, manslaughter, extradition, High Court, pot, play-off).
 - Anything already explained in the recent posts listed by the user (readers have seen it; do not repeat it).
 - Anything the post itself already explains.
+- Never write meta comments such as «قبلاً توضیح داده شده»: if something should not be explained, simply leave it out.
 
 Rules:
 - Only things that appear word for word in the post. Copy each "term" exactly as written in the post.
@@ -495,7 +498,9 @@ async function loadRecentExplained(): Promise<string[]> {
 export async function explainTelegramTerms(post: string): Promise<string> {
   const lines = post.split("\n").filter((l) => !l.trim().startsWith("💡"));
   const clean = lines.join("\n").trim();
-  const done = await loadRecentExplained();
+  // The post's own old lines don't count as "already explained" (e.g. when an article is rewritten).
+  const own = new Set(post.split("\n").filter((l) => l.trim().startsWith("💡")).map((l) => l.trim().replace(/^💡\s*/, "").slice(0, 120)));
+  const done = (await loadRecentExplained()).filter((d) => !own.has(d));
   const history = done.length
     ? `Already explained in recent posts (do NOT explain these again):\n${done.map((d) => `- ${d}`).join("\n")}\n\n`
     : "";

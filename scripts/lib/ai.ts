@@ -439,8 +439,29 @@ export async function repairMixedWords(texts: string[]): Promise<Map<string, str
 // 3b) Telegram: second read of the finished post, explaining unclear terms IN it
 // ---------------------------------------------------------------------------
 
+const EXPLAIN_KINDS = [
+  "irish_organisation_or_agency",
+  "irish_state_institution_or_title",
+  "irish_scheme_document_tax_or_procedure",
+  "irish_sport_culture_or_irish_language",
+  "person",
+  "place_or_venue",
+  "court_or_police",
+  "general_concept",
+  "foreign_or_international",
+  "well_known_name",
+] as const;
+/** Only these kinds are ever explained; everything else is dropped in code, whatever the model says. */
+const EXPLAIN_ALLOWED = new Set<string>(EXPLAIN_KINDS.slice(0, 4));
 const ExplainSchema = z.object({
-  terms: z.array(z.object({ term: z.string(), explanation: z.string() })),
+  terms: z.array(
+    z.object({
+      term: z.string(),
+      kind: z.enum(EXPLAIN_KINDS),
+      already_explained_recently: z.boolean(),
+      explanation: z.string(),
+    }),
+  ),
 });
 
 const EXPLAIN_SYSTEM = `You are the last editor of a short Persian Telegram news post for Iranians in Ireland.
@@ -460,6 +481,8 @@ NEVER EXPLAIN:
 - Anything already explained in the recent posts listed by the user (readers have seen it; do not repeat it).
 - Anything the post itself already explains.
 - Never write meta comments such as «قبلاً توضیح داده شده»: if something should not be explained, simply leave it out.
+
+Output: list candidate names/terms from the post with "kind" set honestly (person, place_or_venue, court_or_police, general_concept, foreign_or_international and well_known_name are never shown to readers) and "already_explained_recently" true if it appears in the recent list. Only the four irish_* kinds can be published.
 
 Rules:
 - Only things that appear word for word in the post. Copy each "term" exactly as written in the post.
@@ -512,7 +535,18 @@ export async function explainTelegramTerms(post: string): Promise<string> {
       system: EXPLAIN_SYSTEM,
       messages: [{ role: "user", content: `${history}<post>\n${clean}\n</post>` }],
     });
-    const terms = (res.parsed_output?.terms ?? []).filter((t) => t.term.trim() && clean.includes(t.term.trim()) && t.explanation.trim()).slice(0, 2);
+    const meta = /نیازی به توضیح|قبلاً توضیح|توضیح داده شده|مشهور است/;
+    const terms = (res.parsed_output?.terms ?? [])
+      .filter(
+        (t) =>
+          EXPLAIN_ALLOWED.has(t.kind) &&
+          !t.already_explained_recently &&
+          t.term.trim() &&
+          clean.includes(t.term.trim()) &&
+          t.explanation.trim().length > 10 &&
+          !meta.test(t.explanation),
+      )
+      .slice(0, 2);
     if (!terms.length) return clean;
     const notes = terms.map((t) => `💡 ${fixPersian(t.explanation.trim())}`);
     const out = clean.split("\n");

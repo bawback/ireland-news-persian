@@ -61,8 +61,10 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
     url,
     image: [`${SITE.url}/opengraph-image.png`],
     keywords: g.keywords.join(", "),
-    author: { "@type": "Organization", name: SITE.name, url: SITE.url },
-    publisher: { "@type": "NewsMediaOrganization", name: SITE.name, url: SITE.url, logo: { "@type": "ImageObject", url: logo } },
+    author: { "@type": "Organization", "@id": `${SITE.url}/#organization`, name: SITE.name, url: `${SITE.url}/about` },
+    publisher: { "@type": "NewsMediaOrganization", "@id": `${SITE.url}/#organization`, name: SITE.name, url: SITE.url, logo: { "@type": "ImageObject", url: logo } },
+    isAccessibleForFree: true,
+    about: { "@type": "Country", name: "Ireland", alternateName: "ایرلند" },
     citation: g.sources.map((s) => s.url),
   };
   const faq = {

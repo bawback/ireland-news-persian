@@ -53,6 +53,31 @@ export async function getByCategory(category: string, limit = 30): Promise<Artic
   return query((q) => q.eq("category", category).order("published_at", { ascending: false }).limit(limit));
 }
 
+/**
+ * One page of the archive (all news, or one category), newest first. Fetches one extra row to know
+ * whether a next page exists, so no count query is needed.
+ */
+export async function getArchivePage(
+  page: number,
+  perPage = 30,
+  category?: string,
+): Promise<{ articles: Article[]; hasNext: boolean }> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("articles");
+  const from = (page - 1) * perPage;
+  let rows: Article[];
+  if (isDemo) {
+    rows = sample(category ? (a) => a.category === category : undefined, 10_000).slice(from, from + perPage + 1);
+  } else {
+    rows = await query((q) => {
+      const base = category ? q.eq("category", category) : q;
+      return base.order("published_at", { ascending: false }).range(from, from + perPage);
+    });
+  }
+  return { articles: rows.slice(0, perPage), hasNext: rows.length > perPage };
+}
+
 export async function getImmigrantHighlights(limit = 6): Promise<Article[]> {
   "use cache";
   cacheLife("minutes");
@@ -98,4 +123,34 @@ export async function searchArticles(term: string, limit = 30): Promise<Article[
       .order("published_at", { ascending: false })
       .limit(limit),
   );
+}
+
+export type SitemapEntry = Pick<Article, "slug" | "published_at" | "category" | "image_url">;
+
+/**
+ * Every published article, light columns only, for the sitemap. Supabase returns at most 1000 rows per
+ * request, so this reads in pages.
+ */
+export async function getSitemapEntries(max = 20_000): Promise<SitemapEntry[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("articles");
+  if (isDemo) return sample(undefined, max);
+  const out: SitemapEntry[] = [];
+  const size = 1000;
+  for (let from = 0; from < max; from += size) {
+    const { data, error } = await db()
+      .from("articles")
+      .select("slug,published_at,category,image_url")
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .range(from, from + size - 1);
+    if (error) {
+      console.error("Supabase sitemap query failed:", error.message);
+      break;
+    }
+    out.push(...((data as SitemapEntry[] | null) ?? []));
+    if (!data || data.length < size) break;
+  }
+  return out;
 }

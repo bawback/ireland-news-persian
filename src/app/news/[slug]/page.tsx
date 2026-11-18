@@ -3,10 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getBySlug, getLatest, getRelated } from "@/lib/articles";
-import { categoryName } from "@/lib/categories";
+import { categoryName, getCategory } from "@/lib/categories";
 import { formatFaDateTime } from "@/lib/dates";
 import { coverageOf, isHot } from "@/lib/types";
-import { SITE } from "@/lib/site";
+import { LD_IDS, LOGO_URL, SITE } from "@/lib/site";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+
+const categoryHeading = (slug: string) => getCategory(slug)?.heading ?? "اخبار ایرلند";
 import { ArticleBody } from "@/components/ArticleBody";
 import { BidiText } from "@/components/BidiText";
 import { ShareButtons } from "@/components/ShareButtons";
@@ -18,15 +21,20 @@ import { cacheLife } from "next/cache";
 export async function generateMetadata({ params }: PageProps<"/news/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const a = await getBySlug(slug);
-  if (!a) return {};
+  // Throwing here (before the page starts streaming) makes the response a real 404, not a 200.
+  if (!a) notFound();
   return {
     title: a.title_fa,
-    description: a.summary_fa,
+    description: a.summary_fa.length > 300 ? `${a.summary_fa.slice(0, 297)}…` : a.summary_fa,
+    keywords: [...a.tags, "اخبار ایرلند", categoryHeading(a.category)],
     alternates: { canonical: `/news/${a.slug}` },
+    authors: [{ name: SITE.name, url: SITE.url }],
     openGraph: {
       type: "article",
+      url: `/news/${a.slug}`,
       title: a.title_fa,
       description: a.summary_fa,
+      authors: [SITE.url],
       publishedTime: a.published_at,
       modifiedTime: a.published_at,
       section: categoryName(a.category),
@@ -75,16 +83,20 @@ async function ArticleView({ slug }: { slug: string }) {
   const related = await getRelated(a);
   const url = `${SITE.url}/news/${a.slug}`;
 
-  const logo = `${SITE.url}/brand/logo-1024.png`;
+  const place =
+    a.category === "northern-ireland"
+      ? { "@type": "Place", name: "Northern Ireland", alternateName: "ایرلند شمالی" }
+      : { "@type": "Country", name: "Ireland", alternateName: "ایرلند" };
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
+    "@id": `${url}#article`,
     headline: a.title_fa.slice(0, 110),
     description: a.summary_fa,
     datePublished: a.published_at,
     dateModified: a.published_at,
     inLanguage: "fa",
-    mainEntityOfPage: url,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
     url,
     image: a.image_url
       ? [
@@ -98,32 +110,37 @@ async function ArticleView({ slug }: { slug: string }) {
           },
         ]
       : [`${SITE.url}/opengraph-image.png`],
+    thumbnailUrl: a.image_url || `${SITE.url}/opengraph-image.png`,
     articleSection: categoryName(a.category),
     keywords: a.tags.join(", "),
-    author: { "@type": "Organization", name: SITE.name, url: SITE.url },
-    publisher: { "@type": "NewsMediaOrganization", name: SITE.name, url: SITE.url, logo: { "@type": "ImageObject", url: logo } },
-    ...(a.source_url ? { isBasedOn: a.source_url } : {}),
-  };
-  const breadcrumbs = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "خانه", item: SITE.url },
-      { "@type": "ListItem", position: 2, name: categoryName(a.category), item: `${SITE.url}/category/${a.category}` },
-      { "@type": "ListItem", position: 3, name: a.title_fa, item: url },
-    ],
+    wordCount: a.body_fa.split(/\s+/).filter(Boolean).length,
+    isAccessibleForFree: true,
+    contentLocation: place,
+    spatialCoverage: place,
+    author: { "@type": "Organization", "@id": LD_IDS.org, name: SITE.name, url: `${SITE.url}/about` },
+    publisher: {
+      "@type": "NewsMediaOrganization",
+      "@id": LD_IDS.org,
+      name: SITE.name,
+      url: SITE.url,
+      logo: { "@type": "ImageObject", url: LOGO_URL, width: 1024, height: 1024 },
+    },
+    isPartOf: { "@id": LD_IDS.website },
+    ...(a.source_url
+      ? { isBasedOn: { "@type": "NewsArticle", url: a.source_url, ...(a.source_title ? { name: a.source_title } : {}), publisher: { "@type": "Organization", name: a.source_name } } }
+      : {}),
   };
 
   return (
     <div className="grid gap-10 lg:grid-cols-3">
       <article className="lg:col-span-2">
         <JsonLd data={jsonLd} />
-        <JsonLd data={breadcrumbs} />
-        <nav className="mb-4 text-sm text-muted">
-          <Link href="/" className="hover:text-brand">خانه</Link>
-          <span className="mx-2">/</span>
-          <Link href={`/category/${a.category}`} className="hover:text-brand">{categoryName(a.category)}</Link>
-        </nav>
+        <Breadcrumbs
+          items={[
+            { name: categoryHeading(a.category), href: `/category/${a.category}` },
+            { name: a.title_fa, href: `/news/${a.slug}` },
+          ]}
+        />
 
         <h1 className="text-[1.9rem] leading-[1.7] font-black sm:text-[2.4rem]">
           <BidiText text={a.title_fa} />
@@ -202,6 +219,9 @@ async function ArticleView({ slug }: { slug: string }) {
             {related.map((r) => (
               <CompactItem key={r.id} a={r} />
             ))}
+            <Link href={`/category/${a.category}`} className="mt-3 inline-block text-sm font-bold text-brand hover:underline">
+              همه {categoryHeading(a.category)} ←
+            </Link>
           </div>
         )}
       </aside>

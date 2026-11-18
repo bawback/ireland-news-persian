@@ -16,7 +16,7 @@ export async function Header() {
         <span className="flex-1 bg-[#ff883e]" />
       </div>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" aria-label="صفحه اصلی">
+        <Link href="/" aria-label="اخبار ایرلند به فارسی - صفحه اصلی" title="اخبار ایرلند به فارسی">
           <Logo />
         </Link>
         <div className="flex items-center gap-4 text-sm text-muted">

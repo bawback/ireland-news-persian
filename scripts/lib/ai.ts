@@ -474,7 +474,7 @@ EXPLAIN ONLY (Ireland-specific):
 - Irish sports, culture and Irish-language words: hurling, camogie, Gaeltacht, Fleadh.
 
 NEVER EXPLAIN:
-- General concepts that exist in every country or that any adult knows, even when they are English or technical words: playoff, bail/وثیقه, liquidation/تصفیه, inquest, strike, work-to-rule, spiking, inflation, mortgage, referendum, budget, court, jury, etc.
+- General concepts that exist in every country or that any adult knows, even when they are English or technical words: playoff, bail/وثیقه, liquidation/تصفیه, inquest, strike, work-to-rule, spiking, inflation, mortgage, referendum, budget, court, jury, VAT, Labour Party, etc.
 - Well-known names: Garda/Gardaí/پلیس ایرلند, HSE, Taoiseach/نخست‌وزیر, RTÉ, Ryanair, Aer Lingus, Sky, Dublin Bus, Luas, the EU, big countries and cities.
 - People (players, politicians, artists), places (cities, towns, streets, squares, airports, stadiums, venues, cinemas, shops, restaurants), courts and police forces, events, films, brands and foreign organisations. Only Irish organisations, institutions, schemes and terms from the list above qualify.
 - Medical, scientific, legal or sports terms that are the same everywhere (HPV, manslaughter, extradition, High Court, pot, play-off).

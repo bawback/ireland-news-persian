@@ -38,6 +38,7 @@ const ClassificationSchema = z.object({
       sensitive: z.boolean(),
       story_key: z.string(),
       fun_appeal: z.number(),
+      controversy: z.number(),
     }),
   ),
 });
@@ -55,6 +56,7 @@ For every item decide:
 - sensitive: true for crime, court cases, deaths, allegations against named people, or anything with legal or defamation risk.
 - fun_appeal: 0 none, 1 mildly interesting, 2 a fun read that many readers would enjoy or share, 3 a must-read fun story or a big event/concert/festival announcement. Only for light stories (category entertainment, culture or sport); serious news gets 0.
 - category "entertainment": concerts, gigs, festivals, events and things to do, nightlife, food and drink, TV/film/music, celebrities and quirky or feel-good stories.
+- controversy: how much Ireland is arguing about it right now. 0 none, 1 some disagreement, 2 a public row (government vs opposition, unions, doctors or other groups pushing back, a sacking or resignation that is disputed, a U-turn, a scandal), 3 a national controversy that dominates the day (on every front page, debated on RTÉ Radio 1 programmes such as Morning Ireland, Today, Liveline, News at One or Drivetime, calls for resignations, Dáil rows). Health service (HSE, hospitals, trolleys, waiting lists), housing, immigration and asylum, cost of living and political rows often score high. Light stories get 0.
 - story_key: a short lowercase English key describing the underlying event (e.g. "budget-2027-tax-bands", "dublin-airport-passenger-cap"), so that two articles about the same event from different outlets get the same key.`;
 
 export async function classifyItems(
@@ -79,6 +81,7 @@ export async function classifyItems(
       immigrant_relevance: clamp(c.immigrant_relevance, 0, 3),
       importance: clamp(c.importance, 1, 5),
       fun_appeal: clamp(c.fun_appeal, 0, 3),
+      controversy: clamp(c.controversy, 0, 3),
     }));
   } catch (e) {
     console.warn("  classification batch failed:", String(e).slice(0, 300));
@@ -120,11 +123,13 @@ For every candidate decide:
 - "new": a separate event, even when the topic is the same as an earlier article (for example "Aer Lingus cuts 500 jobs" is new after "Aer Lingus profit falls"; "maternity hospital keeps emergency access during the summit" is new after "Dublin traffic restrictions for the summit"; "unemployment rate" and "live register" are separate statistics).
 
 same_as: the index of the earlier published article for "duplicate"/"update", otherwise -1. If two candidates in the list report the same event, only the first can be "new"; the later one is a "duplicate" with same_as -1.
+Candidates marked "hot": true are part of a controversy people in Ireland are actively debating (top of the most-read lists, argued about on RTÉ Radio 1). Readers want to follow such a row as it develops, so for a hot candidate a significant new turn in the debate is an "update", not a duplicate: the minister or government defending or explaining the decision, the person at the centre hitting back or announcing a legal challenge, opposition or unions demanding answers, resignations or a Dáil/Oireachtas committee hearing, a new revelation about how the decision was made. Analysis or a live blog of a hot story is an "update" only when it reports such new reactions or revelations; if it only retells what was already published, it is still a "duplicate".
+
 new_facts: for "update", the major new facts in one short English sentence; otherwise "".`;
 
 export async function checkNovelty(
   published: { index: number; source_title: string; title_fa: string }[],
-  candidates: { index: number; title: string; summary: string }[],
+  candidates: { index: number; title: string; summary: string; hot?: boolean }[],
 ): Promise<Map<number, Novelty> | null> {
   if (!candidates.length) return new Map();
   try {

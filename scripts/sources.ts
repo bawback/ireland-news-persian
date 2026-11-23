@@ -38,6 +38,12 @@ export const SOURCES: Source[] = [
 
   // --- Republic of Ireland: general news (media) ---
   { id: "rte-news", name: "آر‌تی‌ای", nameEn: "RTÉ News", feed: "https://www.rte.ie/feeds/rss/?index=/news/", kind: "media", priority: 9, verify: true },
+  // Politics, health and RTÉ's own analysis: where the day's big rows (HSE, hospitals, Dáil) and the
+  // interviews from RTÉ Radio 1 (Morning Ireland, News at One, Drivetime...) are written up as text.
+  // The programme pages' own RSS feeds (/radio/radio1/...) are no longer updated (checked Nov 2026).
+  { id: "rte-politics", name: "آر‌تی‌ای", nameEn: "RTÉ News Politics", feed: "https://www.rte.ie/feeds/rss/?index=/news/politics/", kind: "media", hint: "politics", priority: 9 },
+  { id: "rte-health", name: "آر‌تی‌ای", nameEn: "RTÉ News Health", feed: "https://www.rte.ie/feeds/rss/?index=/news/health/", kind: "media", hint: "health", priority: 9 },
+  { id: "rte-analysis", name: "آر‌تی‌ای", nameEn: "RTÉ Analysis", feed: "https://www.rte.ie/feeds/rss/?index=/news/analysis-and-comment/", kind: "media", priority: 8 },
   { id: "rte-business", name: "آر‌تی‌ای", nameEn: "RTÉ Business", feed: "https://www.rte.ie/feeds/rss/?index=/news/business/", kind: "media", hint: "economy", priority: 8, verify: true },
   { id: "rte-sport", name: "آر‌تی‌ای", nameEn: "RTÉ Sport", feed: "https://www.rte.ie/feeds/rss/?index=/sport/", kind: "media", hint: "sport", priority: 8, verify: true },
   { id: "thejournal", name: "دژورنال", nameEn: "TheJournal.ie", feed: "https://www.thejournal.ie/feed/", kind: "media", priority: 7, verify: true },

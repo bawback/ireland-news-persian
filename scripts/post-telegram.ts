@@ -5,6 +5,7 @@
 import { adminDb } from "./lib/db";
 import { env, envOptional } from "./lib/env";
 import { telegramNewsText } from "./lib/telegram-format";
+import { isNorthernIreland } from "../src/lib/region";
 
 const token = envOptional("TELEGRAM_BOT_TOKEN");
 const channel = envOptional("TELEGRAM_CHANNEL_ID");
@@ -19,7 +20,7 @@ async function main() {
   const since = new Date(Date.now() - 24 * 3600_000).toISOString();
   const { data: articles, error } = await db
     .from("articles")
-    .select("id, slug, title_fa, summary_fa, social")
+    .select("id, slug, title_fa, summary_fa, social, category, source_id, source_title")
     .eq("status", "published")
     .is("telegram_message_id", null)
     .gte("published_at", since)
@@ -35,7 +36,7 @@ async function main() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: channel,
-        text: telegramNewsText(body, link),
+        text: telegramNewsText(body, link, { ni: isNorthernIreland(a) }),
         parse_mode: "HTML",
         link_preview_options: { url: link, prefer_large_media: true },
       }),

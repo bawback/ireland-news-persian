@@ -14,7 +14,8 @@ import { ArticleBody } from "@/components/ArticleBody";
 import { BidiText } from "@/components/BidiText";
 import { ShareButtons } from "@/components/ShareButtons";
 import { TelegramCta } from "@/components/TelegramCta";
-import { CompactItem } from "@/components/ArticleCard";
+import { CompactItem, NiBadge } from "@/components/ArticleCard";
+import { isNorthernIreland } from "@/lib/region";
 import { JsonLd } from "@/components/JsonLd";
 import { cacheLife } from "next/cache";
 
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: PageProps<"/news/[slug]">): P
   return {
     title: a.title_fa,
     description: a.summary_fa.length > 300 ? `${a.summary_fa.slice(0, 297)}…` : a.summary_fa,
-    keywords: [...a.tags, "اخبار ایرلند", categoryHeading(a.category)],
+    keywords: [...a.tags, "اخبار ایرلند", categoryHeading(a.category), ...(isNorthernIreland(a) && a.category !== "northern-ireland" ? ["اخبار ایرلند شمالی"] : [])],
     alternates: { canonical: `/news/${a.slug}` },
     authors: [{ name: SITE.name, url: SITE.url }],
     openGraph: {
@@ -83,8 +84,8 @@ async function ArticleView({ slug }: { slug: string }) {
   const related = await getRelated(a);
   const url = `${SITE.url}/news/${a.slug}`;
 
-  const place =
-    a.category === "northern-ireland"
+  const ni = isNorthernIreland(a);
+  const place = ni
       ? { "@type": "Place", name: "Northern Ireland", alternateName: "ایرلند شمالی" }
       : { "@type": "Country", name: "Ireland", alternateName: "ایرلند" };
   const jsonLd = {
@@ -147,6 +148,7 @@ async function ArticleView({ slug }: { slug: string }) {
         </h1>
 
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
+          {ni && <NiBadge className="px-2.5 py-0.5" />}
           <time dateTime={a.published_at}>{formatFaDateTime(a.published_at)} (به وقت دوبلین)</time>
           {a.immigrant_relevance >= 2 && (
             <span className="rounded-full bg-accent-soft px-2.5 py-0.5 font-semibold text-accent">مهم برای مهاجران</span>

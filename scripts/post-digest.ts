@@ -7,6 +7,7 @@ import { adminDb } from "./lib/db";
 import { env, envBool, envOptional } from "./lib/env";
 import { formatDayFa } from "../src/lib/dates";
 import { isolateForSocial } from "../src/lib/bidi";
+import { isNorthernIreland, NI_NAME } from "../src/lib/region";
 
 const BUCKET = "news-images";
 const COUNT = 5;
@@ -22,7 +23,16 @@ function dublinNow() {
   return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) };
 }
 
-type Row = { slug: string; title_fa: string; category: string; importance: number; immigrant_relevance: number; social: { coverage?: { count: number } } | null };
+type Row = {
+  slug: string;
+  title_fa: string;
+  category: string;
+  importance: number;
+  immigrant_relevance: number;
+  source_id: string | null;
+  source_title: string | null;
+  social: { coverage?: { count: number }; region?: string } | null;
+};
 
 async function main() {
   const token = envOptional("TELEGRAM_BOT_TOKEN");
@@ -42,7 +52,7 @@ async function main() {
   const since = new Date(Date.now() - 24 * 3600_000).toISOString();
   const { data, error } = await db
     .from("articles")
-    .select("slug, title_fa, category, importance, immigrant_relevance, social")
+    .select("slug, title_fa, category, importance, immigrant_relevance, source_id, source_title, social")
     .eq("status", "published")
     .gte("published_at", since)
     .limit(200);
@@ -55,7 +65,8 @@ async function main() {
   const site = env("SITE_URL");
   const lines = top.map((a, i) => {
     const hot = (a.social?.coverage?.count ?? 1) >= 3 ? " 🔥" : "";
-    return `${faNum(i + 1)}. <a href="${site}/news/${a.slug}">${escapeHtml(isolateForSocial(a.title_fa))}</a>${hot}`;
+    const ni = isNorthernIreland(a) ? `📍<b>${NI_NAME}:</b> ` : "";
+    return `${faNum(i + 1)}. ${ni}<a href="${site}/news/${a.slug}">${escapeHtml(isolateForSocial(a.title_fa))}</a>${hot}`;
   });
   const text = [
     `☀️ <b>صبح بخیر! ${faNum(top.length)} خبر مهم ایرلند در ۲۴ ساعت گذشته</b>`,

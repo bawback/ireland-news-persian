@@ -3,6 +3,7 @@ import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { CATEGORIES } from "../../src/lib/categories";
+import { normaliseRegion } from "../../src/lib/region";
 import { applyWordFixes, findMixedWords, fixPersian } from "./fa-fixes";
 
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
@@ -38,6 +39,7 @@ const ClassificationSchema = z.object({
       sensitive: z.boolean(),
       story_key: z.string(),
       fun_appeal: z.number(),
+      region: z.string(),
     }),
   ),
 });
@@ -50,6 +52,7 @@ const CLASSIFIER_SYSTEM = `You triage news headlines for "Ireland News Persian",
 For every item decide:
 - relevant: true only if the story is about Ireland or Northern Ireland (events, people, laws, economy, sport, culture there) or directly affects people living there. World news with no Irish angle is not relevant. Fun and light Irish stories ARE relevant: quirky or feel-good stories from Ireland, new openings and food spots, festivals, concerts and gigs announced or happening in Ireland (including international artists playing Dublin, Belfast or Cork), shows, exhibitions, things to do, Irish TV, film and music, and Irish celebrities. Gossip about non-Irish celebrities with no Irish angle, horoscopes, quizzes, competitions/giveaways, sponsored or affiliate content, shopping deals and live blogs are not relevant.
 - category: one of ${categorySlugs.join(", ")}. Use "northern-ireland" for stories based in Northern Ireland unless a more specific topic dominates. Use "community" only for stories about Iranians or Persian speakers in Ireland.
+- region: where the story happens. "northern_ireland" for stories set in Northern Ireland (Belfast, Derry/Londonderry, Newry, Lisburn, counties Antrim, Armagh, Down, Fermanagh, Londonderry and Tyrone; Stormont, the NI Executive and Assembly, the PSNI, NI courts, councils, hospitals and schools, UK rules as they apply in Northern Ireland, Northern Irish clubs such as Ulster Rugby, Linfield or Derry City), even when the topic is sport, crime or business. "republic" for the Republic of Ireland (Donegal, Cavan and Monaghan are in the Republic although they are in Ulster). "both" for all-island or cross-border stories (the border, North-South bodies, island-wide weather, the Ireland rugby team). "other" when neither applies.
 - immigrant_relevance: 0 none, 1 slightly, 2 clearly useful for immigrants (cost of living, rent, jobs, tax, public services), 3 essential for immigrants (visas, residence permits, citizenship, employment permits, asylum, rules for non-EU nationals, anything about Iran or Iranians).
 - importance: 1 minor local story ... 5 major national story.
 - sensitive: true for crime, court cases, deaths, allegations against named people, or anything with legal or defamation risk.
@@ -79,6 +82,7 @@ export async function classifyItems(
       immigrant_relevance: clamp(c.immigrant_relevance, 0, 3),
       importance: clamp(c.importance, 1, 5),
       fun_appeal: clamp(c.fun_appeal, 0, 3),
+      region: normaliseRegion(c.region) ?? "other",
     }));
   } catch (e) {
     console.warn("  classification batch failed:", String(e).slice(0, 300));

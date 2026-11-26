@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Article } from "./types";
 import { SAMPLE_ARTICLES } from "@/data/sample-articles";
+import { isNorthernIreland } from "./region";
 import { cacheLife, cacheTag } from "next/cache";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,6 +28,15 @@ function sample(filter: (a: Article) => boolean = () => true, limit = 50): Artic
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Builder = any;
 
+/**
+ * Articles of one category page. The Northern Ireland page also lists Northern Ireland stories filed
+ * under another topic (a Belfast court case, an Ulster Rugby match), which carry region "ni".
+ */
+const inCategory = (q: Builder, category: string): Builder =>
+  category === "northern-ireland" ? q.or("category.eq.northern-ireland,social->>region.eq.ni") : q.eq("category", category);
+const sampleInCategory = (category: string) => (a: Article) =>
+  category === "northern-ireland" ? isNorthernIreland(a) : a.category === category;
+
 async function query(build: (q: Builder) => PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<Article[]> {
   const base: Builder = db().from("articles").select(COLUMNS).eq("status", "published");
   const { data, error } = await build(base);
@@ -49,8 +59,8 @@ export async function getByCategory(category: string, limit = 30): Promise<Artic
   "use cache";
   cacheLife("minutes");
   cacheTag("articles");
-  if (isDemo) return sample((a) => a.category === category, limit);
-  return query((q) => q.eq("category", category).order("published_at", { ascending: false }).limit(limit));
+  if (isDemo) return sample(sampleInCategory(category), limit);
+  return query((q) => inCategory(q, category).order("published_at", { ascending: false }).limit(limit));
 }
 
 /**
@@ -68,10 +78,10 @@ export async function getArchivePage(
   const from = (page - 1) * perPage;
   let rows: Article[];
   if (isDemo) {
-    rows = sample(category ? (a) => a.category === category : undefined, 10_000).slice(from, from + perPage + 1);
+    rows = sample(category ? sampleInCategory(category) : undefined, 10_000).slice(from, from + perPage + 1);
   } else {
     rows = await query((q) => {
-      const base = category ? q.eq("category", category) : q;
+      const base = category ? inCategory(q, category) : q;
       return base.order("published_at", { ascending: false }).range(from, from + perPage);
     });
   }

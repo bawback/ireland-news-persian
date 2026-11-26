@@ -12,6 +12,8 @@
   --accent-soft: #fdeee3;
   --hot: #c62828;
   --hot-soft: #fde8e8;
+  --ni: #1f5fa8;
+  --ni-soft: #e6eefa;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,6 +29,8 @@
     --accent-soft: #2d1d12;
     --hot: #ff8a80;
     --hot-soft: #3a1515;
+    --ni: #8fb8f2;
+    --ni-soft: #14223a;
   }
 }
 
@@ -42,6 +46,8 @@
   --color-accent-soft: var(--accent-soft);
   --color-hot: var(--hot);
   --color-hot-soft: var(--hot-soft);
+  --color-ni: var(--ni);
+  --color-ni-soft: var(--ni-soft);
   --font-sans: "Vazirmatn Variable", Tahoma, sans-serif;
 }
 

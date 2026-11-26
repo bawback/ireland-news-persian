@@ -155,7 +155,7 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
 
       <footer className="mt-10 space-y-4 rounded-xl border border-line bg-surface p-5 text-sm leading-7">
         <div>
-          <p className="mb-2 font-bold">منابع رسمی:</p>
+          <p className="mb-2 font-bold">{g.sourcesTitle ?? "منابع رسمی:"}</p>
           <ul className="list-disc space-y-1 ps-5">
             {g.sources.map((s) => (
               <li key={s.url}>
@@ -167,8 +167,8 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
           </ul>
         </div>
         <p className="text-muted">
-          این راهنما برای اطلاع‌رسانی عمومی است و مشاوره حقوقی به حساب نمی‌آید. قوانین مهاجرت ممکن است تغییر کند؛ پیش از
-          هر اقدام، اطلاعات را با سایت رسمی اداره مهاجرت ایرلند مطابقت دهید یا با مشاور مهاجرت معتبر مشورت کنید.
+          {g.disclaimer ??
+            "این راهنما برای اطلاع‌رسانی عمومی است و مشاوره حقوقی به حساب نمی‌آید. قوانین مهاجرت ممکن است تغییر کند؛ پیش از هر اقدام، اطلاعات را با سایت رسمی اداره مهاجرت ایرلند مطابقت دهید یا با مشاور مهاجرت معتبر مشورت کنید."}
         </p>
         <ShareButtons url={url} title={g.title} />
       </footer>

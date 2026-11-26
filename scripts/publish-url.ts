@@ -9,6 +9,7 @@ import { extractArticleText } from "./lib/extract";
 import { cleanArticle, writeArticle, WRITER_MODEL } from "./lib/ai";
 import { refreshSite } from "./lib/revalidate";
 import { SOURCES } from "./sources";
+import { decideRegion, labelSocialPosts, NI_NAME } from "../src/lib/region";
 
 async function main() {
   const url = env("URL");
@@ -56,13 +57,16 @@ async function main() {
   const base = a.slug.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70) || "news";
   const { data: clash } = await db.from("articles").select("id").eq("slug", base).limit(1);
   const slug = clash?.length ? `${base}-${Date.now().toString(36)}` : base;
+  // REGION=ni|roi|both|other overrides the automatic choice.
+  const region = decideRegion({ classifier: process.env.REGION, category, sourceIsNi: source?.hint === "northern-ireland", text: title });
+  const ni = region === "ni";
   const { error } = await db.from("articles").insert({
     slug,
     title_fa: a.title_fa,
     summary_fa: a.summary_fa,
     body_fa: a.body_fa,
     category,
-    tags: a.tags,
+    tags: ni && !a.tags.includes(NI_NAME) ? [...a.tags, NI_NAME] : a.tags,
     immigrant_relevance: relevance,
     importance,
     mode,
@@ -70,7 +74,7 @@ async function main() {
     source_name: source?.name ?? new URL(url).hostname,
     source_url: url,
     source_title: title,
-    social: { telegram: a.telegram_post, x: a.x_post, instagram: a.instagram_caption, whatsapp: a.whatsapp_post },
+    social: { ...labelSocialPosts({ telegram: a.telegram_post, x: a.x_post, instagram: a.instagram_caption, whatsapp: a.whatsapp_post }, ni), region },
     confidence: a.confidence,
     notes_for_editor: a.notes_for_editor,
     status: "published",

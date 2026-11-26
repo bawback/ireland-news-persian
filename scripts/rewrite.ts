@@ -12,6 +12,7 @@ import { extractArticleText } from "./lib/extract";
 import { cleanArticle, writeArticle, WRITER_MODEL } from "./lib/ai";
 import { refreshSite } from "./lib/revalidate";
 import { telegramNewsText } from "./lib/telegram-format";
+import { isNorthernIreland, labelSocialPosts } from "../src/lib/region";
 
 const dublinDate = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Dublin" }).format(d);
 
@@ -68,7 +69,7 @@ async function main() {
           summary_fa: a.summary_fa,
           body_fa: a.body_fa,
           tags: a.tags,
-          social: { ...(r.social ?? {}), telegram: a.telegram_post, x: a.x_post, instagram: a.instagram_caption, whatsapp: a.whatsapp_post },
+          social: { ...(r.social ?? {}), ...labelSocialPosts({ telegram: a.telegram_post, x: a.x_post, instagram: a.instagram_caption, whatsapp: a.whatsapp_post }, isNorthernIreland(r)) },
           notes_for_editor: a.notes_for_editor,
         })
         .eq("id", r.id);
@@ -76,7 +77,7 @@ async function main() {
         console.warn("  save failed:", e.message);
         continue;
       }
-      if (editTelegram && r.telegram_message_id) await editChannelPost(r.telegram_message_id, a.telegram_post, r.slug);
+      if (editTelegram && r.telegram_message_id) await editChannelPost(r.telegram_message_id, a.telegram_post, r.slug, isNorthernIreland(r));
     }
     done++;
   }
@@ -84,7 +85,7 @@ async function main() {
   if (apply && done) await refreshSite();
 }
 
-async function editChannelPost(messageId: number, body: string, slug: string) {
+async function editChannelPost(messageId: number, body: string, slug: string, ni: boolean) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const channel = process.env.TELEGRAM_CHANNEL_ID;
   const site = process.env.SITE_URL;
@@ -96,7 +97,7 @@ async function editChannelPost(messageId: number, body: string, slug: string) {
     body: JSON.stringify({
       chat_id: channel,
       message_id: messageId,
-      text: telegramNewsText(body, link),
+      text: telegramNewsText(body, link, { ni }),
       parse_mode: "HTML",
       link_preview_options: { url: link, prefer_large_media: true },
     }),

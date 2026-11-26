@@ -17,6 +17,7 @@ import { adminDb } from "./lib/db";
 import { envBool, envInt } from "./lib/env";
 import { refreshSite } from "./lib/revalidate";
 import { addCoverage } from "./lib/coverage";
+import { decideRegion, labelSocialPosts, NI_NAME } from "../src/lib/region";
 
 const MAX_AGE_HOURS = envInt("MAX_AGE_HOURS", 36);
 const MAX_ARTICLES_PER_RUN = envInt("MAX_ARTICLES_PER_RUN", 3);
@@ -257,6 +258,8 @@ async function main() {
     const status = REQUIRE_REVIEW
       ? c.sensitive || article.confidence !== "high" ? "pending_review" : "published"
       : article.confidence === "low" ? "rejected" : "published";
+    const region = decideRegion({ classifier: c.region, category: c.category, sourceIsNi: s.hint === "northern-ireland", text: `${it.title}\n${it.summary}` });
+    const ni = region === "ni";
     const now = new Date().toISOString();
     const { data: inserted, error } = await db
       .from("articles")
@@ -266,7 +269,7 @@ async function main() {
         summary_fa: article.summary_fa,
         body_fa: article.body_fa,
         category: c.category,
-        tags: article.tags,
+        tags: ni && !article.tags.includes(NI_NAME) ? [...article.tags, NI_NAME] : article.tags,
         immigrant_relevance: c.immigrant_relevance,
         importance: c.importance,
         mode,
@@ -275,10 +278,11 @@ async function main() {
         source_url: it.url,
         source_title: it.title,
         social: {
-          telegram: article.telegram_post,
-          x: article.x_post,
-          instagram: article.instagram_caption,
-          whatsapp: article.whatsapp_post,
+          ...labelSocialPosts(
+            { telegram: article.telegram_post, x: article.x_post, instagram: article.instagram_caption, whatsapp: article.whatsapp_post },
+            ni,
+          ),
+          region,
         },
         confidence: article.confidence,
         notes_for_editor: article.notes_for_editor,
@@ -295,7 +299,10 @@ async function main() {
     const others = (sameKeyCount.get(c.story_key) ?? 1) - 1;
     if (others > 0) await addCoverage(db, inserted.id, "", others);
     written++;
-    if (status === "published") publishedPaths.push(`/news/${inserted.slug}`, `/category/${c.category}`);
+    if (status === "published") {
+      publishedPaths.push(`/news/${inserted.slug}`, `/category/${c.category}`);
+      if (ni && c.category !== "northern-ireland") publishedPaths.push("/category/northern-ireland");
+    }
     console.log(`  ✓ ${status}: ${article.title_fa}`);
   }
 

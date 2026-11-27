@@ -16,5 +16,9 @@ export type Guide = {
   /** Heading for the FAQ section; defaults to «پرسش‌های رایج». */
   faqTitle?: string;
   faqs: { q: string; a: string }[];
+  /** Footer note; defaults to the immigration-guide disclaimer. */
+  disclaimer?: string;
+  /** Footer heading for the source list; defaults to «منابع رسمی:». */
+  sourcesTitle?: string;
   sources: { name: string; url: string }[];
 };

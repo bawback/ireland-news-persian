@@ -1,0 +1,44 @@
+name: Announce a guide in Telegram
+
+# Posts an existing guide or analysis page (e.g. a hand-written one) to the Telegram channel.
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Guide slug, e.g. murder-in-ireland"
+        required: true
+      heading:
+        description: "Post heading (empty = 📘 راهنمای تازه)"
+        default: ""
+      link_text:
+        description: "Link text (empty = خواندن راهنمای کامل)"
+        default: ""
+      tags:
+        description: "Hashtags (empty = guide defaults)"
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/guide-result.ts "$SLUG"
+        env:
+          SLUG: ${{ github.event.inputs.slug }}
+      - run: npx tsx scripts/announce-guide.ts
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID || secrets.TELEGRAM_CHANNEL_ID }}
+          GUIDE_HEADING: ${{ github.event.inputs.heading }}
+          GUIDE_LINK_TEXT: ${{ github.event.inputs.link_text }}
+          GUIDE_TAGS: ${{ github.event.inputs.tags }}

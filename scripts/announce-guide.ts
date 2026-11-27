@@ -15,7 +15,10 @@ async function main() {
     await new Promise((res) => setTimeout(res, 20_000));
   }
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const text = `📘 <b>راهنمای تازه: ${esc(title)}</b>\n\n${esc(description)}\n\n‏🔗 <a href="${url}">خواندن راهنمای کامل</a>\n\n#راهنما #مهاجرت_به_ایرلند #اخبار_ایرلند`;
+  const heading = envOptional("GUIDE_HEADING") || "📘 راهنمای تازه";
+  const linkText = envOptional("GUIDE_LINK_TEXT") || "خواندن راهنمای کامل";
+  const tags = envOptional("GUIDE_TAGS") || "#راهنما #مهاجرت_به_ایرلند #اخبار_ایرلند";
+  const text = `<b>${esc(heading)}: ${esc(title)}</b>\n\n${esc(description)}\n\n‏🔗 <a href="${url}">${esc(linkText)}</a>\n\n${esc(tags)}`;
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
